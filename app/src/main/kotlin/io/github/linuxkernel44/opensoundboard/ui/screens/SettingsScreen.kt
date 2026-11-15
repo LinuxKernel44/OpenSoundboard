@@ -52,6 +52,7 @@ import io.github.linuxkernel44.opensoundboard.ui.glass.GlassAction
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassChip
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassPanel
 import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidSlider
+import io.github.linuxkernel44.opensoundboard.ui.glass.Segmented
 import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidToggle
 import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
 import io.github.linuxkernel44.opensoundboard.ui.khz
@@ -132,6 +133,9 @@ fun SettingsScreen(bottomInset: Dp) {
                         LiquidToggle({ Settings.singleSound }, { Settings.singleSound = it; Settings.save() }, backdrop)
                     }
                 }
+            }
+            Section(stringResource(R.string.appearance)) {
+                Segmented(backdrop, listOf(stringResource(R.string.theme_system), stringResource(R.string.theme_light), stringResource(R.string.theme_dark)), Settings.themeMode, { Settings.themeMode = it; Settings.save() })
             }
             Section(stringResource(R.string.background)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -117,4 +117,8 @@
     <string name="bg_milkyway">Milky Way</string>
     <string name="bg_ocean">Pacific sunset</string>
     <string name="photo_credits">Photos are in the public domain: USDA Forest Service, National Park Service and Bureau of Land Management, via Wikimedia Commons.</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

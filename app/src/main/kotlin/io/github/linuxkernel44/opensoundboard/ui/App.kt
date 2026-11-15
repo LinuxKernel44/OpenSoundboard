@@ -1,7 +1,11 @@
 package io.github.linuxkernel44.opensoundboard.ui
 
 import androidx.activity.compose.BackHandler
+import android.app.Activity
 import androidx.compose.animation.Crossfade
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,6 +61,14 @@ fun OpenSoundboardApp() {
     var editing by rememberSaveable { mutableStateOf<Int?>(null) }
     var toastText by remember { mutableStateOf<String?>(null) }
 
+    val view = LocalView.current
+    SideEffect {
+        val w = (view.context as? Activity)?.window ?: return@SideEffect
+        val c = WindowCompat.getInsetsController(w, view)
+        c.isAppearanceLightStatusBars = !palette.dark
+        c.isAppearanceLightNavigationBars = !palette.dark
+    }
+
     // Single polling loop for levels, spectrum, playing pads and the output route.
     LaunchedEffect(Unit) {
         var n = 0
@@ -74,7 +86,7 @@ fun OpenSoundboardApp() {
 
     CompositionLocalProvider(LocalAurora provides palette, LocalBackdrop provides backdrop, LocalMeters provides meters, LocalToast provides { toastText = it }) {
         Box(Modifier.fillMaxSize()) {
-            PhotoBackground(Settings.background, Modifier.layerBackdrop(backdrop))
+            PhotoBackground(Settings.background, palette.dark, Modifier.layerBackdrop(backdrop))
             val bottomInset = 104.dp
             Box(Modifier.fillMaxSize().statusBarsPadding()) {
                 Crossfade(tab, label = "tab") { t ->

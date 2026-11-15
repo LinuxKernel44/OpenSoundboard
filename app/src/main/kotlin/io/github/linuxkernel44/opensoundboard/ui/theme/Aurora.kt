@@ -1,6 +1,8 @@
 package io.github.linuxkernel44.opensoundboard.ui.theme
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.isSystemInDarkTheme
+import io.github.linuxkernel44.opensoundboard.data.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -51,28 +53,40 @@ val DarkAurora = AuroraPalette(
     blobs = listOf(Color(0xFFB0408A), Color(0xFF3A5BD0), Color(0xFF1E9C86)),
 )
 
+val LightAurora = AuroraPalette(
+    dark = false, text = Color(0xFF141A2E), muted = Color(0xFF414866), accent = AuroraColors.accentLight, onAccent = Color.White,
+    ok = Color(0xFF138A5A), danger = Color(0xFFD13438), glass = Color(0xFFFFFFFF).copy(0.52f), glassStrong = Color(0xFFFAFAFF).copy(0.74f),
+    scrim = Color(0xFF29293A).copy(0.34f),
+    gradient = listOf(Color(0xFFFFD9E8), Color(0xFFCFE0FF), Color(0xFFC9F2EA)),
+    blobs = listOf(Color(0xFFFF8AB8), Color(0xFF6FA8FF), Color(0xFF5FE3C8)),
+)
+
 val LocalAurora = staticCompositionLocalOf { DarkAurora }
 
+/** Resolves the palette from the Appearance setting (0 system, 1 light, 2 dark). */
 @Composable
-fun auroraPalette() = DarkAurora
+fun auroraPalette(): AuroraPalette {
+    val system = isSystemInDarkTheme()
+    return when (Settings.themeMode) { 1 -> LightAurora; 2 -> DarkAurora; else -> if (system) DarkAurora else LightAurora }
+}
 
 /** The five bundled photographs (public domain). [scrim] darkens brighter photos so text stays readable. */
-enum class Backdrops(val photo: Int, val thumb: Int, val label: Int, val scrim: Float) {
-    Aurora(R.drawable.bg_aurora, R.drawable.bgt_aurora, R.string.bg_aurora, 0.12f),
-    MountainLake(R.drawable.bg_denali, R.drawable.bgt_denali, R.string.bg_denali, 0.14f),
-    MistyForest(R.drawable.bg_forest, R.drawable.bgt_forest, R.string.bg_forest, 0.40f),
-    MilkyWay(R.drawable.bg_milkyway, R.drawable.bgt_milkyway, R.string.bg_milkyway, 0.10f),
-    PacificSunset(R.drawable.bg_ocean, R.drawable.bgt_ocean, R.string.bg_ocean, 0.30f),
+enum class Backdrops(val photo: Int, val thumb: Int, val label: Int, val scrim: Float, val wash: Float) {
+    Aurora(R.drawable.bg_aurora, R.drawable.bgt_aurora, R.string.bg_aurora, 0.12f, 0.40f),
+    MountainLake(R.drawable.bg_denali, R.drawable.bgt_denali, R.string.bg_denali, 0.14f, 0.40f),
+    MistyForest(R.drawable.bg_forest, R.drawable.bgt_forest, R.string.bg_forest, 0.40f, 0.24f),
+    MilkyWay(R.drawable.bg_milkyway, R.drawable.bgt_milkyway, R.string.bg_milkyway, 0.10f, 0.44f),
+    PacificSunset(R.drawable.bg_ocean, R.drawable.bgt_ocean, R.string.bg_ocean, 0.30f, 0.34f),
 }
 
 @Composable
-fun PhotoBackground(index: Int, modifier: Modifier = Modifier) {
+fun PhotoBackground(index: Int, dark: Boolean, modifier: Modifier = Modifier) {
     val bg = Backdrops.entries[index.coerceIn(0, Backdrops.entries.size - 1)]
     Box(modifier.fillMaxSize()) {
         Crossfade(bg, label = "bg") { b ->
             Box(Modifier.fillMaxSize()) {
                 Image(painterResource(b.photo), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(b.scrim)))
+                Box(Modifier.fillMaxSize().background(if (dark) Color.Black.copy(b.scrim) else Color.White.copy(b.wash)))
             }
         }
     }

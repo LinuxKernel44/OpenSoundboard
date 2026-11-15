@@ -52,7 +52,7 @@ fun LiquidToggle(
     backdrop: Backdrop,
     modifier: Modifier = Modifier
 ) {
-    val isLightTheme = false
+    val isLightTheme = !io.github.linuxkernel44.opensoundboard.ui.theme.LocalAurora.current.dark
     val accentColor =
         if (isLightTheme) io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentLight
         else io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentDark
