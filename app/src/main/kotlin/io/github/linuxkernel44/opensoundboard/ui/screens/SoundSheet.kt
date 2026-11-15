@@ -23,6 +23,20 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,12 +94,26 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     DisposableEffect(id) { onDispose { if (name.isNotBlank()) Library.update(id) { it.copy(name = name.trim()) } } }
     LaunchedEffect(volume) { delay(250); if (volume != s.volume) Library.update(id) { it.copy(volume = volume) } }
 
-    Box(Modifier.fillMaxSize().background(p.scrim).clickable(MutableInteractionSource(), null, onClick = onClose), contentAlignment = Alignment.BottomCenter) {
+    // Drag handle: pull the sheet down to close it (or tap the handle). The scrim fades as the sheet moves.
+    val offsetY = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val dragState = rememberDraggableState { dy -> scope.launch { offsetY.snapTo((offsetY.value + dy).coerceAtLeast(0f)) } }
+    fun dismiss() { scope.launch { offsetY.animateTo(3000f, tween(220)); onClose() } }
+
+    Box(
+        Modifier.fillMaxSize().background(p.scrim.copy(alpha = p.scrim.alpha * (1f - (offsetY.value / 1200f).coerceIn(0f, 1f))))
+            .clickable(MutableInteractionSource(), null, onClick = { dismiss() }),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
         GlassPanel(
-            backdrop, Modifier.statusBarsPadding().padding(top = 24.dp).fillMaxWidth().fillMaxHeight(0.9f).clickable(MutableInteractionSource(), null) {},
+            backdrop,
+            Modifier.statusBarsPadding().padding(top = 24.dp).fillMaxWidth().fillMaxHeight(0.9f)
+                .graphicsLayer { translationY = offsetY.value }
+                .clickable(MutableInteractionSource(), null) {},
             radius = 36.dp, strong = true,
         ) {
-            Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 20.dp, top = 34.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GlassField(name, { name = it }, stringResource(R.string.sound_name), Modifier.weight(1f))
                     GlassAction(backdrop, onClose, icon = Ico.Close)
@@ -115,6 +143,19 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                 Section(stringResource(R.string.trim)) { TrimEditor(s) }
                 Section(stringResource(R.string.audio_info)) { InfoTable(s) }
             }
+            // Large touch area (full width, 36 dp tall) around a small visible pill.
+            Box(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().height(36.dp)
+                    .draggable(
+                        state = dragState, orientation = Orientation.Vertical,
+                        onDragStopped = { v ->
+                            if (offsetY.value > with(density) { 120.dp.toPx() } || v > 1500f) { offsetY.animateTo(3000f, tween(220)); onClose() }
+                            else offsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
+                        },
+                    )
+                    .clickable(role = Role.Button) { dismiss() },
+                contentAlignment = Alignment.Center,
+            ) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(p.text.copy(0.38f))) }
         }
     }
 }
