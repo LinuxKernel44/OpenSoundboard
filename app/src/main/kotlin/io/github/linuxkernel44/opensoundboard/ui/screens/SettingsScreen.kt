@@ -55,6 +55,9 @@ import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidSlider
 import io.github.linuxkernel44.opensoundboard.ui.glass.Segmented
 import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidToggle
 import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
+import io.github.linuxkernel44.opensoundboard.update.UpdateError
+import io.github.linuxkernel44.opensoundboard.update.UpdateManager
+import io.github.linuxkernel44.opensoundboard.update.UpdateState
 import io.github.linuxkernel44.opensoundboard.ui.khz
 import io.github.linuxkernel44.opensoundboard.ui.theme.AText
 import io.github.linuxkernel44.opensoundboard.ui.theme.Ico
@@ -211,6 +214,7 @@ fun SettingsScreen(bottomInset: Dp) {
                     GlassAction(backdrop, { importLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, icon = Ico.Download, label = stringResource(R.string.import_backup))
                 }
             }
+            UpdatesSection()
             Section(stringResource(R.string.about)) {
                 GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -223,6 +227,81 @@ fun SettingsScreen(bottomInset: Dp) {
             }
         }
     }
+}
+
+@Composable
+private fun UpdatesSection() {
+    val ctx = LocalContext.current
+    val p = LocalAurora.current
+    val backdrop = LocalBackdrop.current
+    val st = UpdateManager.state
+    Section(stringResource(R.string.updates)) {
+        GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                KeyValue(stringResource(R.string.update_installed), UpdateManager.currentVersion())
+                when (st) {
+                    is UpdateState.Idle -> Unit
+                    is UpdateState.Checking -> AText(stringResource(R.string.update_checking), color = p.muted)
+                    is UpdateState.UpToDate -> AText(stringResource(R.string.update_uptodate), color = p.ok)
+                    is UpdateState.Available -> {
+                        AText(stringResource(R.string.update_available, st.release.version), size = 17.sp, weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                        if (st.release.notes.isNotBlank()) {
+                            AText(stringResource(R.string.update_notes).uppercase(), size = 11.sp, color = p.muted, letterSpacing = 1.sp)
+                            AText(st.release.notes.replace("**", "").replace("`", ""), size = 13.sp, color = p.text, maxLines = 14)
+                        }
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GlassAction(backdrop, { UpdateManager.download(ctx) }, icon = Ico.Download, label = stringResource(R.string.update_download), accent = true)
+                            GlassAction(backdrop, { UpdateManager.skip(st.release.version) }, label = stringResource(R.string.update_skip))
+                            GlassAction(backdrop, { openUrl(ctx, st.release.pageUrl) }, label = stringResource(R.string.update_release_page))
+                        }
+                    }
+                    is UpdateState.Downloading -> {
+                        val frac = if (st.total > 0) (st.done.toFloat() / st.total).coerceIn(0f, 1f) else 0f
+                        AText(stringResource(R.string.update_downloading, (frac * 100).toInt()), size = 15.sp)
+                        Canvas(Modifier.fillMaxWidth().height(10.dp)) {
+                            val r = CornerRadius(size.height / 2)
+                            drawRoundRect(p.muted.copy(0.25f), size = size, cornerRadius = r)
+                            drawRoundRect(p.accent, size = Size(size.width * frac, size.height), cornerRadius = r)
+                        }
+                        GlassAction(backdrop, { UpdateManager.cancel() }, icon = Ico.Close, label = stringResource(R.string.cancel))
+                    }
+                    is UpdateState.Verifying -> AText(stringResource(R.string.update_verifying), color = p.muted)
+                    is UpdateState.Ready -> {
+                        AText(stringResource(R.string.update_ready, st.release.version), size = 15.sp)
+                        if (st.needsPermission) AText(stringResource(R.string.update_allow), size = 13.sp, color = p.muted)
+                        GlassAction(backdrop, { UpdateManager.install(ctx) }, icon = Ico.Upload, label = stringResource(R.string.update_install), accent = true)
+                    }
+                    is UpdateState.Installing -> AText(stringResource(R.string.update_installing), color = p.muted)
+                    is UpdateState.Failed -> {
+                        AText(
+                            stringResource(when (st.error) {
+                                UpdateError.NETWORK -> R.string.err_network; UpdateError.RATE_LIMITED -> R.string.err_rate
+                                UpdateError.NO_APK -> R.string.err_network; UpdateError.CHECKSUM -> R.string.err_checksum
+                                UpdateError.SIGNATURE -> R.string.err_signature; UpdateError.STORAGE -> R.string.err_storage
+                                UpdateError.INSTALL -> R.string.err_install
+                            }), size = 14.sp, color = p.danger,
+                        )
+                        GlassAction(backdrop, { if (st.release != null) UpdateManager.download(ctx) else UpdateManager.check(ctx) }, label = stringResource(R.string.update_retry))
+                    }
+                }
+                val busy = st is UpdateState.Checking || st is UpdateState.Downloading || st is UpdateState.Verifying || st is UpdateState.Installing
+                if (!busy && st !is UpdateState.Available && st !is UpdateState.Ready) {
+                    GlassAction(backdrop, { UpdateManager.check(ctx) }, icon = Ico.Download, label = stringResource(R.string.update_check))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        AText(stringResource(R.string.update_auto), size = 16.sp)
+                        AText(stringResource(R.string.update_auto_hint), size = 12.sp, color = p.muted)
+                    }
+                    LiquidToggle({ Settings.autoUpdateCheck }, { Settings.autoUpdateCheck = it; Settings.save() }, backdrop)
+                }
+            }
+        }
+    }
+}
+
+private fun openUrl(ctx: android.content.Context, url: String) {
+    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
 @Composable

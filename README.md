@@ -12,6 +12,7 @@ An open-source, audiophile soundboard for Android with a Liquid Glass interface.
 - **Backup**: export and import your whole library as a zip. Share any sound with other apps.
 - **Liquid Glass UI** built with [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) (Jetpack Compose). Full refraction needs Android 13+; older versions (minimum Android 8) fall back to frosted translucency.
 - **Liquid Glass settings**: opacity, blur, refraction, color vibrancy, edge highlight and chromatic dispersion, applied live to every glass surface, with a reset button.
+- **In-app updates**: checks the GitHub releases, downloads the new APK with progress, verifies its SHA-256 and signing certificate, then installs it with the system installer. Optional automatic check at launch, "skip this version", and a banner when an update is available.
 - English (US) and French.
 
 ## Download

@@ -53,6 +53,7 @@ import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
 import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.data.PlayMode
+import io.github.linuxkernel44.opensoundboard.update.UpdateManager
 import io.github.linuxkernel44.opensoundboard.data.SoundItem
 import io.github.linuxkernel44.opensoundboard.ui.theme.Icon
 import io.github.linuxkernel44.opensoundboard.ui.EmptyState
@@ -79,6 +80,7 @@ import kotlinx.coroutines.withContext
 fun SoundsScreen(
     favoritesOnly: Boolean, category: String?, onCategory: (String?) -> Unit, onEdit: (Int) -> Unit,
     bottomInset: androidx.compose.ui.unit.Dp,
+    onUpdate: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val backdrop = LocalBackdrop.current
@@ -101,6 +103,14 @@ fun SoundsScreen(
             if (!favoritesOnly) GlassAction(backdrop, { picker.launch(arrayOf("audio/*", "application/ogg")) }, icon = Ico.Plus, label = stringResource(R.string.import_sounds))
         }
         InfoBar(Modifier.padding(horizontal = 16.dp))
+        UpdateManager.pendingRelease()?.takeIf { !favoritesOnly }?.let { r ->
+            GlassPanel(backdrop, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp).fillMaxWidth().clickable(onClick = onUpdate), radius = 20.dp, tint = LocalAurora.current.accent.copy(0.30f)) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Ico.Download, tint = LocalAurora.current.text, size = 18.dp)
+                    AText(stringResource(R.string.update_banner, r.version), Modifier.weight(1f), size = 14.sp, weight = FontWeight.Medium, maxLines = 1)
+                }
+            }
+        }
         if (!favoritesOnly && data.categories.isNotEmpty()) {
             LazyRow(Modifier.padding(top = 12.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { GlassChip(backdrop, stringResource(R.string.all), category == null, { onCategory(null) }) }
