@@ -29,6 +29,8 @@ object Player {
     var output by mutableStateOf(OutputInfo()); private set
     var ready by mutableStateOf(false); private set
     val playing = mutableStateListOf<Int>()
+    /** Playback position (0..1 of the whole file) of every sounding pad, refreshed by the UI poll loop. */
+    val progress = androidx.compose.runtime.mutableStateMapOf<Int, Float>()
     private val main = Handler(Looper.getMainLooper())
 
     fun init(ctx: Context) {
@@ -82,11 +84,20 @@ object Player {
     fun press(s: SoundItem) {
         val single = Settings.singleSound
         when (s.mode) {
-            PlayMode.ONE_SHOT -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 0, s.volume, s.trimStart, s.trimEnd) }
+            PlayMode.ONE_SHOT -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id)
+                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 0, s.volume, s.trimStart, s.trimEnd) }
             PlayMode.LOOP -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id)
                 else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 1, s.volume, s.trimStart, s.trimEnd) }
             PlayMode.HOLD -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 2, s.volume, s.trimStart, s.trimEnd) }
         }
+    }
+    /** Touch on a pad's waveform: starts the sound if needed, then jumps to [fraction] of the file. */
+    fun scrubStart(s: SoundItem, fraction: Float, wasPlaying: Boolean) {
+        if (!wasPlaying) {
+            if (Settings.singleSound) NativeEngine.stopAll()
+            NativeEngine.play(s.id, if (s.mode == PlayMode.LOOP) 1 else 0, s.volume, s.trimStart, s.trimEnd)
+        }
+        NativeEngine.seek(s.id, fraction)
     }
     fun release(s: SoundItem) { if (s.mode == PlayMode.HOLD) NativeEngine.stopSound(s.id) }
     fun stopAll() = NativeEngine.stopAll()
@@ -96,5 +107,7 @@ object Player {
     fun pollPlaying(ids: List<Int>) {
         val now = ids.filter { NativeEngine.isPlaying(it) }
         if (now.size != playing.size || !playing.containsAll(now)) { playing.clear(); playing.addAll(now) }
+        progress.keys.toList().forEach { if (it !in now) progress.remove(it) }
+        for (id in now) { val v = NativeEngine.progress(id); if (kotlin.math.abs((progress[id] ?: -1f) - v) > 0.002f) progress[id] = v }
     }
 }

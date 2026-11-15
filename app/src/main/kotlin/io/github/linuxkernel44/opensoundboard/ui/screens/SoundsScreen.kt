@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
@@ -203,7 +205,30 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                 )
             },
     ) {
-        Waveform(s.id, 22, Modifier.padding(10.dp, 12.dp, 10.dp, 0.dp).fillMaxWidth().height(22.dp), color = p.accent.copy(if (playing) 1f else 0.6f), ready = Player.ready)
+        // The waveform doubles as a seek bar: touch or drag to jump, and the played part is colored.
+        Box(
+            Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp).pointerInput(s.id, s.mode) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    val w = size.width.toFloat().coerceAtLeast(1f)
+                    m.lastSoundId = s.id
+                    Player.scrubStart(s, (down.position.x / w).coerceIn(0f, 1f), NativeEngine.isPlaying(s.id))
+                    while (true) {
+                        val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        c.consume()
+                        if (!c.pressed) break
+                        NativeEngine.seek(s.id, (c.position.x / w).coerceIn(0f, 1f))
+                    }
+                }
+            },
+        ) {
+            Waveform(
+                s.id, 32, Modifier.fillMaxSize().padding(10.dp, 11.dp, 10.dp, 11.dp),
+                color = p.accent.copy(if (playing) 1f else 0.6f), ready = Player.ready,
+                progress = if (playing) (Player.progress[s.id] ?: 0f) else -1f,
+            )
+        }
         if (s.favorite) Box(Modifier.align(Alignment.TopEnd).padding(9.dp).size(7.dp).clip(CircleShape).background(p.accent))
         Box(
             Modifier.align(Alignment.BottomEnd).padding(6.dp).size(30.dp).clip(CircleShape)

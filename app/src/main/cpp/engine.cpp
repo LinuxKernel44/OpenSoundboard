@@ -26,7 +26,7 @@ constexpr int kMaxVoices = 48;
 constexpr int kRing = 8192;  // spectrum ring buffer
 constexpr int kFft = 2048;
 
-enum CmdType : int { kPlay, kStop, kStopAll };
+enum CmdType : int { kPlay, kStop, kStopAll, kSeek };
 struct Cmd {
     int type = 0;
     int id = 0;
@@ -88,6 +88,7 @@ public:
         }
     }
     int streamRate() const { return rate_.load(); }
+    float progress(int id) const { return (id >= 0 && id < kMaxSounds) ? progress_[id].load(std::memory_order_relaxed) : 0.f; }
     bool isPlaying(int id) const { return id >= 0 && id < kMaxSounds && playing_[id].load() > 0; }
     void levels(float* out) {
         out[0] = peakL_.exchange(0.f); out[1] = peakR_.exchange(0.f);
@@ -203,7 +204,11 @@ private:
             const Cmd& c = cmds_[r % kCmds];
             if (c.type == kPlay && c.snd) startVoice(c);
             else if (c.type == kStop) release(c.id);
-            else if (c.type == kStopAll) for (auto& v : voices_) if (v.active) beginRelease(v);
+            else if (c.type == kStopAll) { for (auto& v : voices_) if (v.active) beginRelease(v); }
+            else if (c.type == kSeek) {
+                for (auto& v : voices_) if (v.active && v.id == c.id && !v.releasing)
+                    v.pos = (double)std::max(v.start, std::min(c.start, v.end - 1));
+            }
             r++;
         }
         rd_.store(r, std::memory_order_release);
@@ -264,6 +269,7 @@ private:
             out[2 * i] += L * g; out[2 * i + 1] += R * g;
             v.pos += v.step;
         }
+        progress_[v.id].store((float)(v.pos / (double)std::max<int64_t>(1, s->frames())), std::memory_order_relaxed);
     }
     static inline float cubic(const float* p, float t) {
         return p[1] + 0.5f * t * (p[2] - p[0] + t * (2.f * p[0] - 5.f * p[1] + 4.f * p[2] - p[3] + t * (3.f * (p[1] - p[2]) + p[3] - p[0])));
@@ -296,6 +302,7 @@ private:
     std::atomic<int> rate_{48000};
     std::atomic<Sound*> sounds_[kMaxSounds] = {};
     std::atomic<int> playing_[kMaxSounds] = {};
+    std::atomic<float> progress_[kMaxSounds] = {};
     std::vector<std::pair<Sound*, std::chrono::steady_clock::time_point>> grave_;
     Cmd cmds_[kCmds];
     std::atomic<uint32_t> wr_{0}, rd_{0};
@@ -353,6 +360,13 @@ JNIEXPORT void JNICALL FN(play)(JNIEnv*, jobject, jint id, jint mode, jfloat gai
 }
 JNIEXPORT void JNICALL FN(stopSound)(JNIEnv*, jobject, jint id) { Cmd c; c.type = kStop; c.id = id; E().post(c); }
 JNIEXPORT void JNICALL FN(stopAll)(JNIEnv*, jobject) { Cmd c; c.type = kStopAll; E().post(c); }
+JNIEXPORT void JNICALL FN(seek)(JNIEnv*, jobject, jint id, jfloat frac) {
+    Sound* s = E().get(id);
+    if (!s) return;
+    Cmd c; c.type = kSeek; c.id = id; c.start = (int64_t)(std::min(1.f, std::max(0.f, frac)) * (float)s->frames());
+    E().post(c);
+}
+JNIEXPORT jfloat JNICALL FN(progress)(JNIEnv*, jobject, jint id) { return E().progress(id); }
 JNIEXPORT jboolean JNICALL FN(isPlaying)(JNIEnv*, jobject, jint id) { return E().isPlaying(id); }
 JNIEXPORT void JNICALL FN(setMasterGain)(JNIEnv*, jobject, jfloat g) { E().setMasterGain(g); }
 

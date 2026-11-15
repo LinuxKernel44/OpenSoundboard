@@ -17,6 +17,10 @@ object NativeEngine {
     external fun play(id: Int, mode: Int, gain: Float, startFrac: Float, endFrac: Float)
     external fun stopSound(id: Int)
     external fun stopAll()
+    /** Moves every voice of sound [id] to [fraction] (0..1) of the whole file, clamped to its trim range. */
+    external fun seek(id: Int, fraction: Float)
+    /** Playback position of the most recent voice of [id] as a fraction of the whole file. */
+    external fun progress(id: Int): Float
     external fun isPlaying(id: Int): Boolean
     external fun setMasterGain(gain: Float)
     /** [peakL, peakR, rmsL, rmsR] since the last call. */

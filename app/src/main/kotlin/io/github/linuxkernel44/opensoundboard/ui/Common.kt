@@ -111,14 +111,16 @@ fun KeyValue(key: String, value: String, modifier: Modifier = Modifier) {
 
 /** Mini waveform from the decoded sound, shown on pads and in the trim editor. */
 @Composable
-fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, ready: Boolean = true) {
+fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, ready: Boolean = true, progress: Float = -1f) {
     val peaks = remember(id, buckets, ready) { if (ready) NativeEngine.peaks(id, buckets) else null }
     Canvas(modifier) {
         val p = peaks ?: return@Canvas
         val w = size.width / p.size
         p.forEachIndexed { i, v ->
             val h = (v.coerceIn(0f, 1f) * size.height).coerceAtLeast(2f)
-            drawRoundRect(color, Offset(i * w + w * 0.2f, (size.height - h) / 2f), Size(w * 0.6f, h), CornerRadius(w * 0.3f))
+            // With a progress value, played bars are solid and the rest is dimmed.
+            val c = if (progress < 0f || (i + 0.5f) / p.size <= progress) color else color.copy(alpha = color.alpha * 0.3f)
+            drawRoundRect(c, Offset(i * w + w * 0.2f, (size.height - h) / 2f), Size(w * 0.6f, h), CornerRadius(w * 0.3f))
         }
     }
 }
