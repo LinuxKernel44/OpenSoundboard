@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenSoundboard</string>
+    <string name="tab_sounds">Sons</string>
+    <string name="tab_categories">Catégories</string>
+    <string name="tab_favorites">Favoris</string>
+    <string name="tab_record">Enregistrer</string>
+    <string name="tab_settings">Réglages</string>
+
+    <string name="all">Tous</string>
+    <string name="uncategorized">Sans catégorie</string>
+    <string name="import_sounds">Importer des sons</string>
+    <string name="stop_all">Tout arrêter</string>
+    <string name="empty_sounds_title">Aucun son pour l\'instant</string>
+    <string name="empty_sounds_body">Importez des fichiers audio pour construire votre board. FLAC, WAV, MP3, Ogg, AAC et plus sont pris en charge.</string>
+    <string name="empty_favorites_title">Aucun favori pour l\'instant</string>
+    <string name="empty_favorites_body">Ouvrez un son par appui long et touchez le cœur pour l\'épingler ici.</string>
+    <string name="importing">Importation…</string>
+    <string name="import_failed">Certains fichiers n\'ont pas pu être décodés</string>
+
+    <string name="categories_title">Catégories</string>
+    <string name="new_category">Nouvelle catégorie</string>
+    <string name="category_name">Nom de la catégorie</string>
+    <string name="empty_categories_body">Créez des catégories pour organiser vos sons.</string>
+    <string name="sounds_count">%1$d sons</string>
+
+    <string name="cancel">Annuler</string>
+    <string name="save">Enregistrer</string>
+    <string name="delete">Supprimer</string>
+    <string name="confirm_delete">Touchez à nouveau pour supprimer</string>
+    <string name="rename">Renommer</string>
+    <string name="done">Terminé</string>
+    <string name="share">Partager</string>
+    <string name="play">Lire</string>
+
+    <string name="sound_name">Nom</string>
+    <string name="category">Catégorie</string>
+    <string name="playback_mode">Mode de lecture</string>
+    <string name="mode_one_shot">Une fois</string>
+    <string name="mode_loop">Boucle</string>
+    <string name="mode_hold">Maintenir</string>
+    <string name="volume">Volume</string>
+    <string name="trim">Découpe</string>
+    <string name="audio_info">Infos audio</string>
+    <string name="info_codec">Format</string>
+    <string name="info_sample_rate">Fréquence</string>
+    <string name="info_bit_depth">Profondeur</string>
+    <string name="info_channels">Canaux</string>
+    <string name="info_bitrate">Débit</string>
+    <string name="info_duration">Durée</string>
+    <string name="info_size">Taille</string>
+    <string name="lossy">Avec perte</string>
+    <string name="mono">Mono</string>
+    <string name="stereo">Stéréo</string>
+    <string name="channels_n">%1$d canaux</string>
+
+    <string name="output">Sortie</string>
+    <string name="output_device">Périphérique de sortie</string>
+    <string name="automatic">Automatique</string>
+    <string name="output_rate">Fréquence de sortie</string>
+    <string name="native_rate">Native</string>
+    <string name="exclusive_mode">Mode exclusif</string>
+    <string name="exclusive_hint">Latence minimale et chemin direct vers les DAC USB lorsque l\'appareil le permet.</string>
+    <string name="master_volume">Volume général</string>
+    <string name="live_output">Sortie en direct</string>
+    <string name="out_device">Périphérique</string>
+    <string name="out_stream_rate">Fréquence du flux</string>
+    <string name="out_format">Format d\'échantillon</string>
+    <string name="out_burst">Taille de burst</string>
+    <string name="out_buffer">Tampon</string>
+    <string name="out_path">Chemin audio</string>
+    <string name="out_path_exclusive">Exclusif</string>
+    <string name="out_path_shared">Partagé</string>
+    <string name="out_path_mmap">MMAP</string>
+    <string name="out_latency">Latence</string>
+    <string name="out_xruns">Underruns</string>
+    <string name="out_stopped">Sortie arrêtée</string>
+    <string name="levels">Niveaux</string>
+    <string name="spectrum">Spectre</string>
+    <string name="left">G</string>
+    <string name="right">D</string>
+
+    <string name="backup">Sauvegarde</string>
+    <string name="export_backup">Exporter la bibliothèque</string>
+    <string name="import_backup">Importer la bibliothèque</string>
+    <string name="backup_saved">Sauvegarde enregistrée</string>
+    <string name="backup_restored">%1$d sons restaurés</string>
+    <string name="backup_failed">Échec de la sauvegarde</string>
+    <string name="about">À propos</string>
+    <string name="about_body">Soundboard audiophile open source. Lecture lossless jusqu\'à 24 bits / 192 kHz, sortie à faible latence et enregistrement haute résolution.</string>
+    <string name="licenses">Construit avec AndroidLiquidGlass, Oboe, dr_libs et stb_vorbis. Licence Apache-2.0.</string>
+
+    <string name="record_title">Enregistrer</string>
+    <string name="record_start">Démarrer l\'enregistrement</string>
+    <string name="record_stop">Arrêter l\'enregistrement</string>
+    <string name="record_input">Périphérique d\'entrée</string>
+    <string name="record_rate">Fréquence d\'échantillonnage</string>
+    <string name="record_format">Format</string>
+    <string name="record_pcm24">PCM 24 bits</string>
+    <string name="record_float32">Flottant 32 bits</string>
+    <string name="record_hint">Enregistré en WAV non traité. Branchez une interface audio USB pour enregistrer depuis celle-ci.</string>
+    <string name="permission_needed">L\'accès au micro est nécessaire pour enregistrer.</string>
+    <string name="grant_permission">Autoriser le micro</string>
+    <string name="save_recording">Enregistrer le son</string>
+    <string name="discard">Jeter</string>
+    <string name="recording_default_name">Enregistrement %1$s</string>
+    <string name="khz">%1$s kHz</string>
+    <string name="bits">%1$d bits</string>
+    <string name="ms">%1$s ms</string>
+</resources>

@@ -1,0 +1,28 @@
+package io.github.linuxkernel44.opensoundboard.audio
+
+import java.nio.ByteBuffer
+
+/** JNI bridge to the Oboe based native mixer (see app/src/main/cpp/engine.cpp). */
+object NativeEngine {
+    init { System.loadLibrary("osbaudio") }
+
+    external fun start(deviceId: Int, sampleRate: Int, exclusive: Boolean): Boolean
+    external fun stop()
+    /** Returns [channels, sampleRate, bitDepth, frames] or null when the format is not natively handled. */
+    external fun loadFile(id: Int, path: String): IntArray?
+    external fun codecOf(id: Int): String
+    external fun loadPcm(id: Int, buffer: ByteBuffer, frames: Int, channels: Int, sampleRate: Int, codec: String): Boolean
+    external fun unload(id: Int)
+    /** mode: 0 one-shot, 1 loop, 2 hold. */
+    external fun play(id: Int, mode: Int, gain: Float, startFrac: Float, endFrac: Float)
+    external fun stopSound(id: Int)
+    external fun stopAll()
+    external fun isPlaying(id: Int): Boolean
+    external fun setMasterGain(gain: Float)
+    /** [peakL, peakR, rmsL, rmsR] since the last call. */
+    external fun levels(): FloatArray
+    /** [rate, burst, bufferFrames, exclusive, format, deviceId, mmap, channels, latencyMs, xruns] */
+    external fun streamInfo(): DoubleArray
+    external fun spectrum(bands: Int): FloatArray
+    external fun peaks(id: Int, buckets: Int): FloatArray?
+}

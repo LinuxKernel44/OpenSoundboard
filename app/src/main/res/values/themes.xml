@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.OpenSoundboard" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FFCFE0FF</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

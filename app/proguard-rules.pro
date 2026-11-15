@@ -1,0 +1,1 @@
+-keep class io.github.linuxkernel44.opensoundboard.audio.NativeEngine { *; }

@@ -1,0 +1,11 @@
+OpenSoundboard
+Copyright 2026 OpenSoundboard contributors
+
+This product includes software developed by third parties:
+
+- AndroidLiquidGlass / Backdrop and Shapes by Kyant (Apache-2.0), including UI components
+  adapted from its catalog app (ui/glass). https://github.com/Kyant0/AndroidLiquidGlass
+- Oboe by Google (Apache-2.0). https://github.com/google/oboe
+- dr_libs (dr_wav, dr_flac, dr_mp3) by David Reid (public domain / MIT-0). https://github.com/mackron/dr_libs
+- stb_vorbis by Sean Barrett (public domain / MIT). https://github.com/nothings/stb
+- AndroidX, Jetpack Compose and Kotlin coroutines (Apache-2.0).
