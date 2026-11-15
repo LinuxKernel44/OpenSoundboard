@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
@@ -191,10 +191,12 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                 detectTapGestures(
                     onPress = {
                         if (s.mode == PlayMode.HOLD) {
-                            m.lastSoundId = s.id
-                            Player.press(s)
-                            tryAwaitRelease()
-                            Player.release(s)
+                            // Wait a moment first, so a scroll that starts on this pad (which cancels the press) never plays it.
+                            when (withTimeoutOrNull(120) { tryAwaitRelease() }) {
+                                null -> { m.lastSoundId = s.id; Player.press(s); tryAwaitRelease(); Player.release(s) }
+                                true -> { m.lastSoundId = s.id; Player.press(s); Player.releaseLater(s, 150) }
+                                else -> Unit
+                            }
                         }
                     },
                     // Setting onLongPress (even empty) makes detectTapGestures cancel onTap for long presses.
@@ -207,21 +209,28 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
     ) {
         // The waveform doubles as a seek bar: touch or drag to jump, and the played part is colored.
         Box(
-            Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp).pointerInput(s.id, s.mode) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    down.consume()
-                    val w = size.width.toFloat().coerceAtLeast(1f)
-                    m.lastSoundId = s.id
-                    Player.scrubStart(s, (down.position.x / w).coerceIn(0f, 1f), NativeEngine.isPlaying(s.id))
-                    while (true) {
-                        val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                        c.consume()
-                        if (!c.pressed) break
-                        NativeEngine.seek(s.id, (c.position.x / w).coerceIn(0f, 1f))
-                    }
+            Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp)
+                // Nothing happens on touch-down: a tap jumps (or starts from there) on release, a horizontal drag scrubs,
+                // and a vertical swipe is left to the list so scrolling never plays a sound.
+                .pointerInput(s.id, s.mode) {
+                    detectTapGestures(onTap = { o ->
+                        m.lastSoundId = s.id
+                        Player.scrubStart(s, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), NativeEngine.isPlaying(s.id))
+                    })
                 }
-            },
+                .pointerInput(s.id, s.mode) {
+                    var wasPlaying = false
+                    detectHorizontalDragGestures(
+                        onDragStart = { o ->
+                            wasPlaying = NativeEngine.isPlaying(s.id)
+                            m.lastSoundId = s.id
+                            Player.scrubStart(s, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), wasPlaying)
+                        },
+                    ) { change, _ ->
+                        change.consume()
+                        NativeEngine.seek(s.id, (change.position.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f))
+                    }
+                },
         ) {
             Waveform(
                 s.id, 32, Modifier.fillMaxSize().padding(10.dp, 11.dp, 10.dp, 11.dp),

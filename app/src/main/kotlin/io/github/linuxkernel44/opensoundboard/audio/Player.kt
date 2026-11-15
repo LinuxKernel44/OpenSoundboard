@@ -99,6 +99,8 @@ object Player {
         }
         NativeEngine.seek(s.id, fraction)
     }
+    /** Stops a hold-mode sound after [ms], used for a quick tap on a hold pad. */
+    fun releaseLater(s: SoundItem, ms: Long) { main.postDelayed({ release(s) }, ms) }
     fun release(s: SoundItem) { if (s.mode == PlayMode.HOLD) NativeEngine.stopSound(s.id) }
     fun stopAll() = NativeEngine.stopAll()
     fun preview(s: SoundItem, start: Float = s.trimStart, end: Float = s.trimEnd) { if (Settings.singleSound) NativeEngine.stopAll() else NativeEngine.stopSound(s.id); NativeEngine.play(s.id, 0, s.volume, start, end) }
