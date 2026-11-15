@@ -240,6 +240,8 @@ private:
         const Sound* s = v.snd;
         const int chans = s->channels;
         const bool loop = v.mode == 1;
+        // Recomputed every block so loops keep their exact pitch and length if the stream is reopened at another rate.
+        v.step = (double)s->sampleRate / (double)std::max(1, rate_.load());
         const bool unity = std::fabs(v.step - 1.0) < 1e-9;
         for (int i = 0; i < n; i++) {
             if (v.pos >= (double)v.end) {
@@ -323,15 +325,15 @@ extern "C" {
 JNIEXPORT jboolean JNICALL FN(start)(JNIEnv*, jobject, jint dev, jint rate, jboolean excl) { return E().start(dev, rate, excl); }
 JNIEXPORT void JNICALL FN(stop)(JNIEnv*, jobject) { E().stop(); }
 
-JNIEXPORT jintArray JNICALL FN(loadFile)(JNIEnv* env, jobject, jint id, jstring path) {
+JNIEXPORT jintArray JNICALL FN(loadFile)(JNIEnv* env, jobject, jint id, jstring path, jboolean gapless) {
     const char* p = env->GetStringUTFChars(path, nullptr);
-    Sound* s = decodeFile(p);
+    Sound* s = decodeFile(p, gapless);
     env->ReleaseStringUTFChars(path, p);
     if (!s || s->data.empty()) { delete s; return nullptr; }
-    jint info[4] = {s->channels, s->sampleRate, s->bitDepth, (jint)s->frames()};
+    jint info[6] = {s->channels, s->sampleRate, s->bitDepth, (jint)s->frames(), s->trimDelay, s->trimPadding};
     E().put(id, s);
-    jintArray arr = env->NewIntArray(4);
-    env->SetIntArrayRegion(arr, 0, 4, info);
+    jintArray arr = env->NewIntArray(6);
+    env->SetIntArrayRegion(arr, 0, 6, info);
     return arr;
 }
 JNIEXPORT jstring JNICALL FN(codecOf)(JNIEnv* env, jobject, jint id) {

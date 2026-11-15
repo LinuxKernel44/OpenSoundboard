@@ -130,4 +130,8 @@
     <string name="glass_chromatic">Chromatic dispersion</string>
     <string name="glass_chromatic_hint">Colored fringes on refracted edges. Refraction needs Android 13 or later.</string>
     <string name="glass_reset">Reset glass settings</string>
+    <string name="gapless">Gapless playback</string>
+    <string name="gapless_hint">Removes the encoder delay and padding of MP3 and AAC files so loops, trims and seeks repeat without a gap. Sounds are reloaded when you change this.</string>
+    <string name="info_gapless">Gapless trim</string>
+    <string name="gapless_trimmed">%1$d + %2$d samples</string>
 </resources>

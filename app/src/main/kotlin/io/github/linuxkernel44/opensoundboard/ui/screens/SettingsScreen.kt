@@ -137,6 +137,15 @@ fun SettingsScreen(bottomInset: Dp) {
             Section(stringResource(R.string.appearance)) {
                 Segmented(backdrop, listOf(stringResource(R.string.theme_system), stringResource(R.string.theme_light), stringResource(R.string.theme_dark)), Settings.themeMode, { Settings.themeMode = it; Settings.save() })
             }
+            GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        AText(stringResource(R.string.gapless), size = 16.sp)
+                        AText(stringResource(R.string.gapless_hint), size = 12.sp, color = p.muted)
+                    }
+                    LiquidToggle({ Settings.gapless }, { Settings.gapless = it; Settings.save(); thread { Library.loadAllIntoEngine() } }, backdrop)
+                }
+            }
             Section(stringResource(R.string.background)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Backdrops.entries.forEachIndexed { i, b ->

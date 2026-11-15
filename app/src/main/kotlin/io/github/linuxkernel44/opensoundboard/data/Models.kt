@@ -13,6 +13,8 @@ data class SourceInfo(
     val bitrateKbps: Int = 0,
     val durationMs: Long = 0,
     val sizeBytes: Long = 0,
+    val gaplessDelay: Int = 0,     // encoder delay frames trimmed from the start
+    val gaplessPadding: Int = 0,   // encoder padding frames trimmed from the end
 )
 
 data class SoundItem(
@@ -51,6 +53,7 @@ internal fun LibraryData.toJson(): JSONObject = JSONObject().apply {
                     put("codec", s.info.codec); put("sampleRate", s.info.sampleRate); put("channels", s.info.channels)
                     put("bitDepth", s.info.bitDepth); put("bitrate", s.info.bitrateKbps)
                     put("durationMs", s.info.durationMs); put("size", s.info.sizeBytes)
+                    put("gDelay", s.info.gaplessDelay); put("gPadding", s.info.gaplessPadding)
                 })
             })
         }
@@ -71,7 +74,7 @@ internal fun libraryFromJson(o: JSONObject): LibraryData {
                 volume = s.optDouble("volume", 1.0).toFloat(),
                 trimStart = s.optDouble("trimStart", 0.0).toFloat(), trimEnd = s.optDouble("trimEnd", 1.0).toFloat(),
                 info = SourceInfo(i.optString("codec"), i.optInt("sampleRate"), i.optInt("channels"), i.optInt("bitDepth"),
-                    i.optInt("bitrate"), i.optLong("durationMs"), i.optLong("size")),
+                    i.optInt("bitrate"), i.optLong("durationMs"), i.optLong("size"), i.optInt("gDelay"), i.optInt("gPadding")),
             )
         }
     } ?: emptyList()

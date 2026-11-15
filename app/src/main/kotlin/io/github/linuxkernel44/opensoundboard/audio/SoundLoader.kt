@@ -3,6 +3,7 @@ package io.github.linuxkernel44.opensoundboard.audio
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import io.github.linuxkernel44.opensoundboard.data.Settings
 import io.github.linuxkernel44.opensoundboard.data.SourceInfo
 import java.io.File
 import java.nio.ByteBuffer
@@ -12,9 +13,11 @@ import java.nio.ByteOrder
 object SoundLoader {
     fun load(id: Int, file: File): SourceInfo? {
         val size = file.length()
-        NativeEngine.loadFile(id, file.absolutePath)?.let { (ch, rate, depth, frames) ->
+        val gapless = Settings.gapless
+        NativeEngine.loadFile(id, file.absolutePath, gapless)?.let { r ->
+            val (ch, rate, depth, frames) = r
             val ms = frames * 1000L / rate.coerceAtLeast(1)
-            return SourceInfo(NativeEngine.codecOf(id), rate, ch, depth, kbps(size, ms), ms, size)
+            return SourceInfo(NativeEngine.codecOf(id), rate, ch, depth, kbps(size, ms), ms, size, r[4], r[5])
         }
         return decodeWithMediaCodec(id, file, size)
     }
@@ -72,14 +75,28 @@ object SoundLoader {
                 }
             }
             codec.stop(); codec.release()
-            val frames = buf.position() / 4 / ch
+            var frames = buf.position() / 4 / ch
             if (frames <= 0) return null
             buf.flip()
+            // Gapless: drop the encoder delay (priming) and padding that AAC / M4A files declare, so the decoded
+            // audio is exactly the original length and loops repeat without a gap.
+            var delay = 0
+            var padding = 0
+            if (Settings.gapless) {
+                if (fmt.containsKey("encoder-delay")) delay = fmt.getInteger("encoder-delay").coerceAtLeast(0)
+                if (fmt.containsKey("encoder-padding")) padding = fmt.getInteger("encoder-padding").coerceAtLeast(0)
+                if (delay + padding >= frames) { delay = 0; padding = 0 }
+                if (delay > 0 || padding > 0) {
+                    buf.position(delay * ch * 4).limit((frames - padding) * ch * 4)
+                    buf = buf.slice().order(ByteOrder.nativeOrder())
+                    frames -= delay + padding
+                }
+            }
             val label = mime.removePrefix("audio/").uppercase().replace("MPEG", "MP3").replace("MP4A-LATM", "AAC")
             if (!NativeEngine.loadPcm(id, buf, frames, ch, rate, label)) return null
             val ms = frames * 1000L / rate
             val br = if (fmt.containsKey(MediaFormat.KEY_BIT_RATE)) fmt.getInteger(MediaFormat.KEY_BIT_RATE) / 1000 else kbps(size, ms)
-            return SourceInfo(label, rate, ch, 0, br, ms, size)
+            return SourceInfo(label, rate, ch, 0, br, ms, size, delay, padding)
         } catch (e: Exception) {
             return null
         } finally {

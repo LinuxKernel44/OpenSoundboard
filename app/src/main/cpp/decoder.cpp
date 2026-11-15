@@ -15,7 +15,7 @@ static bool endsWith(const char* s, const char* ext) {
     return n >= m && strcasecmp(s + n - m, ext) == 0;
 }
 
-Sound* decodeFile(const char* path) {
+Sound* decodeFile(const char* path, bool gapless) {
     if (endsWith(path, ".wav") || endsWith(path, ".wave")) {
         drwav wav;
         if (!drwav_init_file(&wav, path, nullptr)) return nullptr;
@@ -45,17 +45,23 @@ Sound* decodeFile(const char* path) {
         return s;
     }
     if (endsWith(path, ".mp3")) {
-        drmp3_config cfg;
-        drmp3_uint64 frames = 0;
-        float* pcm = drmp3_open_file_and_read_pcm_frames_f32(path, &cfg, &frames, nullptr);
-        if (!pcm) return nullptr;
+        drmp3 mp3;
+        if (!drmp3_init_file(&mp3, path, nullptr)) return nullptr;
+        int delay = (int)mp3.delayInPCMFrames, padding = (int)mp3.paddingInPCMFrames;
+        if (!gapless) { mp3.delayInPCMFrames = 0; mp3.paddingInPCMFrames = 0; delay = padding = 0; }
+        drmp3_uint64 total = drmp3_get_pcm_frame_count(&mp3);
+        if (total == 0) { drmp3_uninit(&mp3); return nullptr; }
         auto* s = new Sound();
-        s->channels = (int)cfg.channels;
-        s->sampleRate = (int)cfg.sampleRate;
+        s->channels = (int)mp3.channels;
+        s->sampleRate = (int)mp3.sampleRate;
         s->bitDepth = 0;
         s->codec = "MP3";
-        s->data.assign(pcm, pcm + (size_t)frames * cfg.channels);
-        drmp3_free(pcm, nullptr);
+        s->trimDelay = delay;
+        s->trimPadding = padding;
+        s->data.resize((size_t)total * mp3.channels);
+        drmp3_uint64 got = drmp3_read_pcm_frames_f32(&mp3, total, s->data.data());
+        s->data.resize((size_t)got * mp3.channels);
+        drmp3_uninit(&mp3);
         return s;
     }
     if (endsWith(path, ".ogg")) {

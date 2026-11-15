@@ -130,4 +130,8 @@
     <string name="glass_chromatic">Dispersion chromatique</string>
     <string name="glass_chromatic_hint">Franges colorées sur les bords réfractés. La réfraction nécessite Android 13 ou plus.</string>
     <string name="glass_reset">Réinitialiser le verre</string>
+    <string name="gapless">Lecture sans coupure</string>
+    <string name="gapless_hint">Retire le délai et le remplissage d\'encodeur des fichiers MP3 et AAC pour que les boucles, découpes et sauts se répètent sans trou. Les sons sont rechargés quand vous changez ceci.</string>
+    <string name="info_gapless">Découpe sans coupure</string>
+    <string name="gapless_trimmed">%1$d + %2$d échantillons</string>
 </resources>

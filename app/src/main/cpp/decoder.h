@@ -9,8 +9,11 @@ struct Sound {
     int sampleRate = 48000;
     int bitDepth = 16;        // source bit depth when known (0 = unknown / lossy)
     std::string codec;
+    int trimDelay = 0;        // encoder delay frames removed from the start (gapless)
+    int trimPadding = 0;      // encoder padding frames removed from the end (gapless)
     int64_t frames() const { return channels ? (int64_t)(data.size() / channels) : 0; }
 };
 
 // Returns nullptr if the format is not handled natively (caller falls back to MediaCodec).
-Sound* decodeFile(const char* path);
+// gapless: remove encoder delay / padding (MP3 with a LAME tag) so loops repeat without a gap.
+Sound* decodeFile(const char* path, bool gapless);

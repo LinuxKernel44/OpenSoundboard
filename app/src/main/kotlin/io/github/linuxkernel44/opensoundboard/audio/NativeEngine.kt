@@ -8,8 +8,8 @@ object NativeEngine {
 
     external fun start(deviceId: Int, sampleRate: Int, exclusive: Boolean): Boolean
     external fun stop()
-    /** Returns [channels, sampleRate, bitDepth, frames] or null when the format is not natively handled. */
-    external fun loadFile(id: Int, path: String): IntArray?
+    /** Returns [channels, sampleRate, bitDepth, frames, trimmedDelay, trimmedPadding] or null when the format is not natively handled. */
+    external fun loadFile(id: Int, path: String, gapless: Boolean): IntArray?
     external fun codecOf(id: Int): String
     external fun loadPcm(id: Int, buffer: ByteBuffer, frames: Int, channels: Int, sampleRate: Int, codec: String): Boolean
     external fun unload(id: Int)

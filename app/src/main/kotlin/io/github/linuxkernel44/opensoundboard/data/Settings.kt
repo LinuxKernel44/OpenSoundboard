@@ -24,6 +24,7 @@ object Settings {
     var glassChromatic by mutableStateOf(false)       // dispersion on refracted edges
     var glassSaturation by mutableFloatStateOf(1.5f)
     var glassHighlight by mutableFloatStateOf(1f)     // edge light
+    var gapless by mutableStateOf(true)              // trim encoder delay / padding so loops repeat seamlessly
     var singleSound by mutableStateOf(true)          // starting a sound cuts the one that is playing
     var background by mutableIntStateOf(0)           // index into Backgrounds
     var spectrumBands = 32
@@ -39,6 +40,7 @@ object Settings {
         recordFloat = prefs.getBoolean("recFloat", false)
         singleSound = prefs.getBoolean("single", true)
         themeMode = prefs.getInt("theme", 0).coerceIn(0, 2)
+        gapless = prefs.getBoolean("gapless", true)
         glassOpacity = prefs.getFloat("gOpacity", 0.4f)
         glassBlur = prefs.getFloat("gBlur", 10f)
         glassRefraction = prefs.getFloat("gRefr", 0.35f)
@@ -56,6 +58,6 @@ object Settings {
     fun save() {
         prefs.edit().putInt("outDev", outputDeviceId).putInt("outRate", outputSampleRate).putBoolean("exclusive", exclusive)
             .putFloat("master", masterVolume).putInt("recDev", recordDeviceId).putInt("recRate", recordSampleRate)
-            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).apply()
+            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putBoolean("gapless", gapless).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).apply()
     }
 }

@@ -5,7 +5,7 @@ import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -131,6 +131,7 @@ private fun InfoTable(s: SoundItem) {
             KeyValue(stringResource(R.string.info_bitrate), "${i.bitrateKbps} kb/s")
             KeyValue(stringResource(R.string.info_duration), fmtDuration(i.durationMs))
             KeyValue(stringResource(R.string.info_size), fmtSize(i.sizeBytes))
+            if (i.gaplessDelay > 0 || i.gaplessPadding > 0) KeyValue(stringResource(R.string.info_gapless), stringResource(R.string.gapless_trimmed, i.gaplessDelay, i.gaplessPadding))
         }
     }
 }
@@ -145,7 +146,8 @@ private fun TrimEditor(s: SoundItem) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             Modifier.fillMaxWidth().height(96.dp).pointerInput(s.id) {
-                detectDragGestures(
+                // Horizontal only, so scrolling the sheet vertically over the waveform never edits the trim.
+                detectHorizontalDragGestures(
                     onDragStart = { o -> dragging = if (kotlin.math.abs(o.x / size.width - a) <= kotlin.math.abs(o.x / size.width - b)) 1 else 2 },
                     onDragEnd = { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) } },
                     onDragCancel = { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) } },
