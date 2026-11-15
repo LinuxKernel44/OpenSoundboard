@@ -234,7 +234,7 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
         ) {
             Waveform(
                 s.id, 32, Modifier.fillMaxSize().padding(10.dp, 11.dp, 10.dp, 11.dp),
-                color = p.accent.copy(if (playing) 1f else 0.6f), ready = Player.ready,
+                color = p.accent.copy(if (playing) 1f else 0.6f),
                 progress = if (playing) (Player.progress[s.id] ?: 0f) else -1f,
             )
         }

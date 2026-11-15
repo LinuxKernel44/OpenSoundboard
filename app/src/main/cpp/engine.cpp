@@ -392,7 +392,7 @@ JNIEXPORT jfloatArray JNICALL FN(peaks)(JNIEnv* env, jobject, jint id, jint buck
     for (int b = 0; b < buckets; b++) {
         int64_t i0 = n * b / buckets, i1 = std::max(i0 + 1, n * (b + 1) / buckets);
         float m = 0;
-        int64_t step = std::max<int64_t>(1, (i1 - i0) / 64);
+        int64_t step = std::max<int64_t>(1, (i1 - i0) / 512);
         for (int64_t i = i0; i < i1 && i < n; i += step)
             for (int c = 0; c < s->channels; c++) m = std::max(m, std::fabs(s->data[(size_t)i * s->channels + c]));
         v[b] = m;

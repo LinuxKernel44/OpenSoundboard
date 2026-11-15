@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import io.github.linuxkernel44.opensoundboard.R
-import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
+import io.github.linuxkernel44.opensoundboard.data.WaveformCache
 import io.github.linuxkernel44.opensoundboard.data.SourceInfo
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassAction
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassPanel
@@ -111,8 +111,9 @@ fun KeyValue(key: String, value: String, modifier: Modifier = Modifier) {
 
 /** Mini waveform from the decoded sound, shown on pads and in the trim editor. */
 @Composable
-fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, ready: Boolean = true, progress: Float = -1f) {
-    val peaks = remember(id, buckets, ready) { if (ready) NativeEngine.peaks(id, buckets) else null }
+fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, progress: Float = -1f) {
+    val base = WaveformCache.base(id)
+    val peaks = remember(base, buckets) { base?.let { WaveformCache.resample(it, buckets) } }
     Canvas(modifier) {
         val p = peaks ?: return@Canvas
         val w = size.width / p.size

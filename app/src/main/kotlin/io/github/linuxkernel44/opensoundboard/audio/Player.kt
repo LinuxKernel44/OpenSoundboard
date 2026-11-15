@@ -14,6 +14,7 @@ import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.data.PlayMode
 import io.github.linuxkernel44.opensoundboard.data.Settings
 import io.github.linuxkernel44.opensoundboard.data.SoundItem
+import io.github.linuxkernel44.opensoundboard.data.WaveformCache
 import kotlin.concurrent.thread
 
 data class OutputInfo(
@@ -37,6 +38,7 @@ object Player {
         appCtx = ctx.applicationContext
         audio = appCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         thread(name = "osb-init") {
+            WaveformCache.preload(Library.data.sounds)
             restartOutput()
             Library.loadAllIntoEngine()
             main.post { ready = true }

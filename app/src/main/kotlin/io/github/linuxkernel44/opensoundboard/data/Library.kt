@@ -35,6 +35,7 @@ object Library {
         var changed = false
         val updated = data.sounds.map { s ->
             val info = SoundLoader.load(s.id, soundFile(s))
+            if (info != null) WaveformCache.ensure(s)
             if (info != null && info != s.info) { changed = true; s.copy(info = info) } else s
         }
         if (changed) { data = data.copy(sounds = updated); save() }
@@ -53,6 +54,7 @@ object Library {
     fun delete(id: Int) {
         val s = data.sounds.firstOrNull { it.id == id } ?: return
         NativeEngine.unload(id)
+        WaveformCache.remove(id)
         soundFile(s).delete()
         mutate { d -> d.copy(sounds = d.sounds.filterNot { it.id == id }) }
     }
@@ -87,6 +89,7 @@ object Library {
         val info = SoundLoader.load(id, file)
         if (info == null) { file.delete(); return null }
         val item = SoundItem(id, file.name, name, categoryId, info = info)
+        WaveformCache.ensure(item)
         mutate { d -> d.copy(sounds = d.sounds + item) }
         return item
     }
@@ -135,6 +138,7 @@ object Library {
             val info = SoundLoader.load(id, file)
             if (info == null) { file.delete(); return@forEach }
             val item = s.copy(id = id, file = file.name, categoryId = s.categoryId?.let { catMap[it] }, info = info)
+            WaveformCache.ensure(item)
             mutate { d -> d.copy(sounds = d.sounds + item) }
             added++
         }
