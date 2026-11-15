@@ -47,7 +47,7 @@ class AuroraPalette(
 
 val DarkAurora = AuroraPalette(
     dark = true, text = Color(0xFFF2F4FF), muted = Color(0xFFC9CFE6), accent = AuroraColors.accentDark, onAccent = Color(0xFF0B1030),
-    ok = Color(0xFF3DDC97), danger = Color(0xFFFF6B70), glass = Color(0xFF121626).copy(0.36f), glassStrong = Color(0xFF121626).copy(0.62f),
+    ok = Color(0xFF3DDC97), danger = Color(0xFFFF6B70), glass = Color(0xFF121626).copy(0.12f), glassStrong = Color(0xFF121626).copy(0.34f),
     scrim = Color(0xFF05060C).copy(0.55f),
     gradient = listOf(Color(0xFF2A1740), Color(0xFF14213F), Color(0xFF0E2E33)),
     blobs = listOf(Color(0xFFB0408A), Color(0xFF3A5BD0), Color(0xFF1E9C86)),
@@ -55,7 +55,7 @@ val DarkAurora = AuroraPalette(
 
 val LightAurora = AuroraPalette(
     dark = false, text = Color(0xFF141A2E), muted = Color(0xFF414866), accent = AuroraColors.accentLight, onAccent = Color.White,
-    ok = Color(0xFF138A5A), danger = Color(0xFFD13438), glass = Color(0xFFFFFFFF).copy(0.52f), glassStrong = Color(0xFFFAFAFF).copy(0.74f),
+    ok = Color(0xFF138A5A), danger = Color(0xFFD13438), glass = Color(0xFFFFFFFF).copy(0.18f), glassStrong = Color(0xFFFAFAFF).copy(0.40f),
     scrim = Color(0xFF29293A).copy(0.34f),
     gradient = listOf(Color(0xFFFFD9E8), Color(0xFFCFE0FF), Color(0xFFC9F2EA)),
     blobs = listOf(Color(0xFFFF8AB8), Color(0xFF6FA8FF), Color(0xFF5FE3C8)),

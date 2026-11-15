@@ -68,11 +68,11 @@ fun LiquidBottomTabs(
 ) {
     val isLightTheme = !io.github.linuxkernel44.opensoundboard.ui.theme.LocalAurora.current.dark
     val accentColor =
-        if (isLightTheme) io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentLight
+        if (isLightTheme) androidx.compose.ui.graphics.Color(0xFF2038C0)
         else io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentDark
     val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
-        else Color(0xFF121212).copy(0.4f)
+        if (isLightTheme) Color(0xFFFAFAFA).copy(0.14f)
+        else Color(0xFF121212).copy(0.14f)
 
     val tabsBackdrop = rememberLayerBackdrop()
 
