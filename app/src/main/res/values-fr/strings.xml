@@ -121,4 +121,13 @@
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
+    <string name="glass_title">Liquid Glass</string>
+    <string name="glass_opacity">Opacité</string>
+    <string name="glass_blur">Flou</string>
+    <string name="glass_refraction">Réfraction</string>
+    <string name="glass_saturation">Éclat des couleurs</string>
+    <string name="glass_highlight">Reflet des bords</string>
+    <string name="glass_chromatic">Dispersion chromatique</string>
+    <string name="glass_chromatic_hint">Franges colorées sur les bords réfractés. La réfraction nécessite Android 13 ou plus.</string>
+    <string name="glass_reset">Réinitialiser le verre</string>
 </resources>

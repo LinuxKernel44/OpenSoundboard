@@ -46,15 +46,10 @@ fun GlassPanel(
         modifier.drawBackdrop(
             backdrop = backdrop,
             shape = { RoundedRectangle(radius) },
-            effects = {
-                if (strong) colorControls(brightness = if (p.dark) 0f else 0.15f, saturation = 1.5f)
-                else vibrancy()
-                blur(if (strong) 18f.dp.toPx() else 10f.dp.toPx())
-                if (refract) lens(14f.dp.toPx(), 28f.dp.toPx(), depthEffect = strong)
-            },
-            highlight = { if (strong) Highlight.Plain else Highlight.Default },
+            effects = { with(GlassStyle) { glassEffects(strong, !p.dark) } },
+            highlight = { GlassStyle.highlight(strong) },
             onDrawSurface = {
-                drawRect(if (strong) p.glassStrong else p.glass)
+                drawRect(GlassStyle.tint(if (strong) p.glassStrong else p.glass))
                 if (tint != Color.Unspecified) drawRect(tint)
             },
         ),
@@ -69,8 +64,9 @@ fun GlassChip(backdrop: Backdrop, label: String, selected: Boolean, onClick: () 
         modifier
             .drawBackdrop(
                 backdrop, { Capsule() },
-                effects = { vibrancy(); blur(8f.dp.toPx()) },
-                onDrawSurface = { drawRect(if (selected) p.accent else p.glass) },
+                effects = { with(GlassStyle) { glassEffects(false, !p.dark) } },
+                highlight = { GlassStyle.highlight(false) },
+                onDrawSurface = { drawRect(if (selected) p.accent else GlassStyle.tint(p.glass)) },
             )
             .clickable(role = Role.Button, onClick = onClick)
             .height(34.dp).padding(horizontal = 14.dp),
@@ -88,7 +84,7 @@ fun GlassAction(
     val fg = when { accent -> p.onAccent; danger -> p.danger; else -> p.text }
     LiquidButton(
         onClick = onClick, backdrop = backdrop, modifier = modifier,
-        tint = if (accent) p.accent else Color.Unspecified, surfaceColor = if (accent) Color.Unspecified else p.glass,
+        tint = if (accent) p.accent else Color.Unspecified, surfaceColor = if (accent) Color.Unspecified else GlassStyle.tint(p.glass),
     ) {
         if (icon != null) Icon(icon, tint = fg, size = 20.dp)
         if (label != null) AText(label, color = fg, weight = FontWeight.Medium, maxLines = 1)

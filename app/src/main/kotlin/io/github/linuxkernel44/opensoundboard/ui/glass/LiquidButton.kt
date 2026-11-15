@@ -58,9 +58,10 @@ fun LiquidButton(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                    if (io.github.linuxkernel44.opensoundboard.data.Settings.glassBlur > 0.5f) blur((io.github.linuxkernel44.opensoundboard.data.Settings.glassBlur * 0.2f).dp.toPx())
+                    lens(12f.dp.toPx() * GlassStyle.interactiveLens, 24f.dp.toPx() * GlassStyle.interactiveLens, chromaticAberration = io.github.linuxkernel44.opensoundboard.data.Settings.glassChromatic)
                 },
+                highlight = { GlassStyle.highlight(false) },
                 layerBlock = if (isInteractive) {
                     {
                         val width = size.width

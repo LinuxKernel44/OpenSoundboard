@@ -10,6 +10,7 @@ An open-source, audiophile soundboard for Android with a Liquid Glass interface.
 - **High-resolution recording**: unprocessed microphone or USB input, 44.1 to 192 kHz when supported, saved as 24-bit PCM or 32-bit float WAV.
 - **Backup**: export and import your whole library as a zip. Share any sound with other apps.
 - **Liquid Glass UI** built with [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) (Jetpack Compose). Full refraction needs Android 13+; older versions (minimum Android 8) fall back to frosted translucency.
+- **Liquid Glass settings**: opacity, blur, refraction, color vibrancy, edge highlight and chromatic dispersion, applied live to every glass surface, with a reset button.
 - English (US) and French.
 
 ## Download

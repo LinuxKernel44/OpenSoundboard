@@ -58,6 +58,7 @@ import io.github.linuxkernel44.opensoundboard.ui.Waveform
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassAction
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassChip
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassPanel
+import io.github.linuxkernel44.opensoundboard.ui.glass.GlassStyle
 import io.github.linuxkernel44.opensoundboard.ui.khz
 import io.github.linuxkernel44.opensoundboard.ui.shortInfo
 import io.github.linuxkernel44.opensoundboard.ui.theme.AText
@@ -171,9 +172,10 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .drawBackdrop(
                 backdrop, { RoundedRectangle(22.dp) },
-                effects = { vibrancy(); blur(10f.dp.toPx()) },
+                effects = { with(GlassStyle) { glassEffects(false, !p.dark) } },
+                highlight = { GlassStyle.highlight(false) },
                 onDrawSurface = {
-                    drawRect(p.glass)
+                    drawRect(GlassStyle.tint(p.glass))
                     if (playing) drawRect(p.accent.copy(0.28f))
                 },
             )

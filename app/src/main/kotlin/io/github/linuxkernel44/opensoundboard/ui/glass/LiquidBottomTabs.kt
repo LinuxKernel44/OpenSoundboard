@@ -71,8 +71,10 @@ fun LiquidBottomTabs(
         if (isLightTheme) androidx.compose.ui.graphics.Color(0xFF2038C0)
         else io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentDark
     val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(0.14f)
-        else Color(0xFF121212).copy(0.14f)
+        GlassStyle.tint(
+            if (isLightTheme) Color(0xFFFAFAFA).copy(0.14f)
+            else Color(0xFF121212).copy(0.14f)
+        )
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -169,8 +171,8 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        blur((io.github.linuxkernel44.opensoundboard.data.Settings.glassBlur * 0.8f).dp.toPx().coerceAtLeast(0.01f))
+                        lens(24f.dp.toPx() * GlassStyle.interactiveLens, 24f.dp.toPx() * GlassStyle.interactiveLens)
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -207,10 +209,10 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            blur(8f.dp.toPx())
+                            blur((io.github.linuxkernel44.opensoundboard.data.Settings.glassBlur * 0.8f).dp.toPx().coerceAtLeast(0.01f))
                             lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
+                                24f.dp.toPx() * progress * GlassStyle.interactiveLens,
+                                24f.dp.toPx() * progress * GlassStyle.interactiveLens
                             )
                         },
                         highlight = {

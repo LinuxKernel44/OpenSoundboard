@@ -153,6 +153,25 @@ fun SettingsScreen(bottomInset: Dp) {
                     }
                 }
             }
+            Section(stringResource(R.string.glass_title)) {
+                GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        GlassSliderRow(stringResource(R.string.glass_opacity), "${(Settings.glassOpacity * 100).toInt()}%", { Settings.glassOpacity }, 0f..1f) { Settings.glassOpacity = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_blur), "${Settings.glassBlur.toInt()} dp", { Settings.glassBlur }, 0f..30f) { Settings.glassBlur = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_refraction), "${(Settings.glassRefraction * 100).toInt()}%", { Settings.glassRefraction }, 0f..1f) { Settings.glassRefraction = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_saturation), "${(Settings.glassSaturation * 100).toInt()}%", { Settings.glassSaturation }, 0f..2.5f) { Settings.glassSaturation = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_highlight), "${(Settings.glassHighlight * 100).toInt()}%", { Settings.glassHighlight }, 0f..1f) { Settings.glassHighlight = it; Settings.save() }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                AText(stringResource(R.string.glass_chromatic), size = 16.sp)
+                                AText(stringResource(R.string.glass_chromatic_hint), size = 12.sp, color = p.muted)
+                            }
+                            LiquidToggle({ Settings.glassChromatic }, { Settings.glassChromatic = it; Settings.save() }, backdrop)
+                        }
+                        GlassAction(backdrop, { Settings.resetGlass() }, icon = Ico.Close, label = stringResource(R.string.glass_reset))
+                    }
+                }
+            }
             Section(stringResource(R.string.output_device)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassChip(backdrop, stringResource(R.string.automatic), Settings.outputDeviceId == 0, { Settings.outputDeviceId = 0; apply() })
@@ -194,6 +213,18 @@ fun SettingsScreen(bottomInset: Dp) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun GlassSliderRow(label: String, valueText: String, value: () -> Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    val p = LocalAurora.current
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            AText(label, size = 15.sp)
+            AText(valueText, size = 13.sp, color = p.muted, mono = true)
+        }
+        LiquidSlider(value, onChange, range, (range.endInclusive - range.start) / 200f, LocalBackdrop.current, Modifier.padding(horizontal = 4.dp))
     }
 }
 
