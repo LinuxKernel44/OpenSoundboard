@@ -80,15 +80,17 @@ object Player {
 
     // ---- pad actions ----
     fun press(s: SoundItem) {
+        val single = Settings.singleSound
         when (s.mode) {
-            PlayMode.ONE_SHOT -> NativeEngine.play(s.id, 0, s.volume, s.trimStart, s.trimEnd)
-            PlayMode.LOOP -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id) else NativeEngine.play(s.id, 1, s.volume, s.trimStart, s.trimEnd)
-            PlayMode.HOLD -> NativeEngine.play(s.id, 2, s.volume, s.trimStart, s.trimEnd)
+            PlayMode.ONE_SHOT -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 0, s.volume, s.trimStart, s.trimEnd) }
+            PlayMode.LOOP -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id)
+                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 1, s.volume, s.trimStart, s.trimEnd) }
+            PlayMode.HOLD -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 2, s.volume, s.trimStart, s.trimEnd) }
         }
     }
     fun release(s: SoundItem) { if (s.mode == PlayMode.HOLD) NativeEngine.stopSound(s.id) }
     fun stopAll() = NativeEngine.stopAll()
-    fun preview(s: SoundItem, start: Float = s.trimStart, end: Float = s.trimEnd) { NativeEngine.stopSound(s.id); NativeEngine.play(s.id, 0, s.volume, start, end) }
+    fun preview(s: SoundItem, start: Float = s.trimStart, end: Float = s.trimEnd) { if (Settings.singleSound) NativeEngine.stopAll() else NativeEngine.stopSound(s.id); NativeEngine.play(s.id, 0, s.volume, start, end) }
 
     /** Syncs the list of currently sounding ids (call from a UI polling loop). */
     fun pollPlaying(ids: List<Int>) {

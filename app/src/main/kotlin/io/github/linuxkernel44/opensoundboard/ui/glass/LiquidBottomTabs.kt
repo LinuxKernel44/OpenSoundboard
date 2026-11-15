@@ -66,7 +66,7 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
-    val isLightTheme = !isSystemInDarkTheme()
+    val isLightTheme = false
     val accentColor =
         if (isLightTheme) io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentLight
         else io.github.linuxkernel44.opensoundboard.ui.theme.AuroraColors.accentDark

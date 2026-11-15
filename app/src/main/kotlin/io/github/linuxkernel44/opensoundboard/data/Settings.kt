@@ -17,6 +17,8 @@ object Settings {
     var recordDeviceId by mutableIntStateOf(0)
     var recordSampleRate by mutableIntStateOf(48000)
     var recordFloat by mutableStateOf(false)         // false = 24-bit PCM, true = 32-bit float
+    var singleSound by mutableStateOf(true)          // starting a sound cuts the one that is playing
+    var background by mutableIntStateOf(0)           // index into Backgrounds
     var spectrumBands = 32
 
     fun init(ctx: Context) {
@@ -28,11 +30,13 @@ object Settings {
         recordDeviceId = prefs.getInt("recDev", 0)
         recordSampleRate = prefs.getInt("recRate", 48000)
         recordFloat = prefs.getBoolean("recFloat", false)
+        singleSound = prefs.getBoolean("single", true)
+        background = prefs.getInt("bg", 0).coerceIn(0, 4)
     }
 
     fun save() {
         prefs.edit().putInt("outDev", outputDeviceId).putInt("outRate", outputSampleRate).putBoolean("exclusive", exclusive)
             .putFloat("master", masterVolume).putInt("recDev", recordDeviceId).putInt("recRate", recordSampleRate)
-            .putBoolean("recFloat", recordFloat).apply()
+            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("bg", background).apply()
     }
 }

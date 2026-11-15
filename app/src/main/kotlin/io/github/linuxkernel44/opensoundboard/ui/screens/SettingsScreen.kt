@@ -3,6 +3,17 @@ package io.github.linuxkernel44.opensoundboard.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import io.github.linuxkernel44.opensoundboard.ui.theme.Backdrops
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -111,6 +122,33 @@ fun SettingsScreen(bottomInset: Dp) {
                     }
                 }
             }
+            Section(stringResource(R.string.playback)) {
+                GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            AText(stringResource(R.string.single_sound), size = 16.sp)
+                            AText(stringResource(R.string.single_sound_hint), size = 12.sp, color = p.muted)
+                        }
+                        LiquidToggle({ Settings.singleSound }, { Settings.singleSound = it; Settings.save() }, backdrop)
+                    }
+                }
+            }
+            Section(stringResource(R.string.background)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Backdrops.entries.forEachIndexed { i, b ->
+                        val sel = Settings.background == i
+                        Column(Modifier.weight(1f).clickable { Settings.background = i; Settings.save() }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Image(
+                                painterResource(b.thumb), stringResource(b.label),
+                                Modifier.fillMaxWidth().aspectRatio(0.62f).clip(RoundedCornerShape(14.dp))
+                                    .border(if (sel) 3.dp else 1.dp, if (sel) p.accent else Color.White.copy(0.35f), RoundedCornerShape(14.dp)),
+                                contentScale = ContentScale.Crop,
+                            )
+                            AText(stringResource(b.label), size = 10.sp, color = if (sel) p.text else p.muted, maxLines = 2, align = TextAlign.Center)
+                        }
+                    }
+                }
+            }
             Section(stringResource(R.string.output_device)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassChip(backdrop, stringResource(R.string.automatic), Settings.outputDeviceId == 0, { Settings.outputDeviceId = 0; apply() })
@@ -147,6 +185,7 @@ fun SettingsScreen(bottomInset: Dp) {
                         AText("OpenSoundboard ${BuildConfig.VERSION_NAME}", size = 16.sp)
                         AText(stringResource(R.string.about_body), size = 13.sp, color = p.muted)
                         AText(stringResource(R.string.licenses), size = 12.sp, color = p.muted)
+                        AText(stringResource(R.string.photo_credits), size = 12.sp, color = p.muted)
                     }
                 }
             }

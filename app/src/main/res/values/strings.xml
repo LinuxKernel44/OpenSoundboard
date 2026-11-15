@@ -107,4 +107,14 @@
     <string name="khz">%1$s kHz</string>
     <string name="bits">%1$d-bit</string>
     <string name="ms">%1$s ms</string>
+    <string name="playback">Playback</string>
+    <string name="single_sound">One sound at a time</string>
+    <string name="single_sound_hint">Starting a sound cuts the one that is playing.</string>
+    <string name="background">Background</string>
+    <string name="bg_aurora">Aurora borealis</string>
+    <string name="bg_denali">Mountain lake</string>
+    <string name="bg_forest">Misty forest</string>
+    <string name="bg_milkyway">Milky Way</string>
+    <string name="bg_ocean">Pacific sunset</string>
+    <string name="photo_credits">Photos are in the public domain: USDA Forest Service, National Park Service and Bureau of Land Management, via Wikimedia Commons.</string>
 </resources>

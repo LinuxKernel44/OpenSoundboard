@@ -107,4 +107,14 @@
     <string name="khz">%1$s kHz</string>
     <string name="bits">%1$d bits</string>
     <string name="ms">%1$s ms</string>
+    <string name="playback">Lecture</string>
+    <string name="single_sound">Un seul son à la fois</string>
+    <string name="single_sound_hint">Lancer un son coupe celui qui est en cours.</string>
+    <string name="background">Arrière-plan</string>
+    <string name="bg_aurora">Aurore boréale</string>
+    <string name="bg_denali">Lac de montagne</string>
+    <string name="bg_forest">Forêt dans la brume</string>
+    <string name="bg_milkyway">Voie lactée</string>
+    <string name="bg_ocean">Coucher de soleil sur le Pacifique</string>
+    <string name="photo_credits">Photos du domaine public : USDA Forest Service, National Park Service et Bureau of Land Management, via Wikimedia Commons.</string>
 </resources>

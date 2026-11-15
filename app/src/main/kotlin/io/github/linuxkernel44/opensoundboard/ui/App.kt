@@ -39,7 +39,8 @@ import io.github.linuxkernel44.opensoundboard.ui.screens.SettingsScreen
 import io.github.linuxkernel44.opensoundboard.ui.screens.SoundSheet
 import io.github.linuxkernel44.opensoundboard.ui.screens.SoundsScreen
 import io.github.linuxkernel44.opensoundboard.ui.theme.AText
-import io.github.linuxkernel44.opensoundboard.ui.theme.AuroraBackground
+import io.github.linuxkernel44.opensoundboard.ui.theme.PhotoBackground
+import io.github.linuxkernel44.opensoundboard.data.Settings
 import io.github.linuxkernel44.opensoundboard.ui.theme.Ico
 import io.github.linuxkernel44.opensoundboard.ui.theme.Icon
 import io.github.linuxkernel44.opensoundboard.ui.theme.LocalAurora
@@ -73,7 +74,7 @@ fun OpenSoundboardApp() {
 
     CompositionLocalProvider(LocalAurora provides palette, LocalBackdrop provides backdrop, LocalMeters provides meters, LocalToast provides { toastText = it }) {
         Box(Modifier.fillMaxSize()) {
-            AuroraBackground(Modifier.layerBackdrop(backdrop))
+            PhotoBackground(Settings.background, Modifier.layerBackdrop(backdrop))
             val bottomInset = 104.dp
             Box(Modifier.fillMaxSize().statusBarsPadding()) {
                 Crossfade(tab, label = "tab") { t ->
