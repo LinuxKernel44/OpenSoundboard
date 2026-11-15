@@ -3,7 +3,9 @@ package io.github.linuxkernel44.opensoundboard.ui.screens
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +50,9 @@ import io.github.linuxkernel44.opensoundboard.R
 import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
 import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
+import io.github.linuxkernel44.opensoundboard.data.PlayMode
 import io.github.linuxkernel44.opensoundboard.data.SoundItem
+import io.github.linuxkernel44.opensoundboard.ui.theme.Icon
 import io.github.linuxkernel44.opensoundboard.ui.EmptyState
 import io.github.linuxkernel44.opensoundboard.ui.LocalBackdrop
 import io.github.linuxkernel44.opensoundboard.ui.LocalMeters
@@ -180,20 +184,33 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                 },
             )
             .pointerInput(s.id, s.mode) {
+                // A tap plays on release; a long press does nothing. Hold-mode pads are the exception:
+                // they play for as long as the finger stays down.
                 detectTapGestures(
                     onPress = {
-                        m.lastSoundId = s.id
-                        Player.press(s)
-                        tryAwaitRelease()
-                        Player.release(s)
+                        if (s.mode == PlayMode.HOLD) {
+                            m.lastSoundId = s.id
+                            Player.press(s)
+                            tryAwaitRelease()
+                            Player.release(s)
+                        }
                     },
-                    onLongPress = { NativeEngine.stopSound(s.id); onEdit(s.id) },
+                    // Setting onLongPress (even empty) makes detectTapGestures cancel onTap for long presses.
+                    onLongPress = { },
+                    onTap = {
+                        if (s.mode != PlayMode.HOLD) { m.lastSoundId = s.id; Player.press(s) }
+                    },
                 )
             },
     ) {
         Waveform(s.id, 22, Modifier.padding(10.dp, 12.dp, 10.dp, 0.dp).fillMaxWidth().height(22.dp), color = p.accent.copy(if (playing) 1f else 0.6f), ready = Player.ready)
         if (s.favorite) Box(Modifier.align(Alignment.TopEnd).padding(9.dp).size(7.dp).clip(CircleShape).background(p.accent))
-        Column(Modifier.align(Alignment.BottomStart).padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(
+            Modifier.align(Alignment.BottomEnd).padding(6.dp).size(30.dp).clip(CircleShape)
+                .background(p.text.copy(0.12f)).clickable(role = Role.Button) { onEdit(s.id) },
+            contentAlignment = Alignment.Center,
+        ) { Icon(Ico.Edit, tint = p.text.copy(0.8f), size = 15.dp) }
+        Column(Modifier.align(Alignment.BottomStart).padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 38.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             AText(s.name, size = 13.sp, weight = FontWeight.SemiBold, maxLines = 2)
             AText(shortInfo(s.info), size = 9.sp, color = p.muted, mono = true, maxLines = 1)
         }
