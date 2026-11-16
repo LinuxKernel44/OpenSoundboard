@@ -25,10 +25,14 @@ data class SoundItem(
     val favorite: Boolean = false,
     val mode: PlayMode = PlayMode.ONE_SHOT,
     val volume: Float = 1f,
+    val gainDb: Float = 0f,          // extra gain in dB, applied on top of the volume (-24..+24)
     val trimStart: Float = 0f,
     val trimEnd: Float = 1f,
     val info: SourceInfo = SourceInfo(),
 )
+
+/** Linear gain sent to the engine: the volume fader times the gain in dB. */
+fun SoundItem.linearGain(): Float = volume * Math.pow(10.0, gainDb / 20.0).toFloat()
 
 data class Category(val id: String, val name: String)
 
@@ -48,7 +52,7 @@ internal fun LibraryData.toJson(): JSONObject = JSONObject().apply {
                 put("id", s.id); put("file", s.file); put("name", s.name)
                 put("category", s.categoryId ?: JSONObject.NULL)
                 put("favorite", s.favorite); put("mode", s.mode.name)
-                put("volume", s.volume.toDouble()); put("trimStart", s.trimStart.toDouble()); put("trimEnd", s.trimEnd.toDouble())
+                put("volume", s.volume.toDouble()); put("gainDb", s.gainDb.toDouble()); put("trimStart", s.trimStart.toDouble()); put("trimEnd", s.trimEnd.toDouble())
                 put("info", JSONObject().apply {
                     put("codec", s.info.codec); put("sampleRate", s.info.sampleRate); put("channels", s.info.channels)
                     put("bitDepth", s.info.bitDepth); put("bitrate", s.info.bitrateKbps)
@@ -72,6 +76,7 @@ internal fun libraryFromJson(o: JSONObject): LibraryData {
                 favorite = s.optBoolean("favorite"),
                 mode = runCatching { PlayMode.valueOf(s.optString("mode", "ONE_SHOT")) }.getOrDefault(PlayMode.ONE_SHOT),
                 volume = s.optDouble("volume", 1.0).toFloat(),
+                gainDb = s.optDouble("gainDb", 0.0).toFloat(),
                 trimStart = s.optDouble("trimStart", 0.0).toFloat(), trimEnd = s.optDouble("trimEnd", 1.0).toFloat(),
                 info = SourceInfo(i.optString("codec"), i.optInt("sampleRate"), i.optInt("channels"), i.optInt("bitDepth"),
                     i.optInt("bitrate"), i.optLong("durationMs"), i.optLong("size"), i.optInt("gDelay"), i.optInt("gPadding")),

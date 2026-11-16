@@ -21,6 +21,8 @@ object NativeEngine {
     external fun seek(id: Int, fraction: Float)
     /** Playback position of the most recent voice of [id] as a fraction of the whole file. */
     external fun progress(id: Int): Float
+    /** Largest absolute sample (linear, 1.0 = full scale) of sound [id] between two fractions of the file. */
+    external fun peakLevel(id: Int, startFraction: Float, endFraction: Float): Float
     external fun isPlaying(id: Int): Boolean
     external fun setMasterGain(gain: Float)
     /** [peakL, peakR, rmsL, rmsR] since the last call. */

@@ -161,4 +161,10 @@
     <string name="err_storage">Espace de stockage insuffisant pour la mise à jour.</string>
     <string name="err_install">L\'installation a échoué.</string>
     <string name="trim_reset">Réinitialiser la découpe</string>
+    <string name="gain">Gain</string>
+    <string name="gain_peak">Crête %1$s dBFS</string>
+    <string name="gain_after">Crête après gain : %1$s dBFS</string>
+    <string name="gain_clip">Crête après gain : %1$s dBFS. Risque de distorsion.</string>
+    <string name="gain_reset">0 dB</string>
+    <string name="gain_normalize">Normaliser à -1 dBFS</string>
 </resources>

@@ -141,8 +141,7 @@ public:
         uint32_t w = ringW_.load(std::memory_order_relaxed);
         for (int i = 0; i < n; i++) {
             float l = out[2 * i] * m, r = out[2 * i + 1] * m;
-            if (l > 1.f) l = 1.f; else if (l < -1.f) l = -1.f;
-            if (r > 1.f) r = 1.f; else if (r < -1.f) r = -1.f;
+            l = softClip(l); r = softClip(r);
             out[2 * i] = l; out[2 * i + 1] = r;
             pl = std::max(pl, std::fabs(l)); pr = std::max(pr, std::fabs(r));
             sl += l * l; sr += r * r;
@@ -285,6 +284,13 @@ private:
         }
         progress_[v.id].store((float)(v.pos / (double)std::max<int64_t>(1, s->frames())), std::memory_order_relaxed);
     }
+    // Transparent below 0.95 full scale; above it a smooth knee rounds boosted peaks instead of hard-clipping them.
+    static inline float softClip(float x) {
+        float a = std::fabs(x);
+        if (a <= 0.95f) return x;
+        float y = 0.95f + 0.05f * std::tanh((a - 0.95f) / 0.05f);
+        return x < 0.f ? -y : y;
+    }
     static inline float cubic(const float* p, float t) {
         return p[1] + 0.5f * t * (p[2] - p[0] + t * (2.f * p[0] - 5.f * p[1] + 4.f * p[2] - p[3] + t * (3.f * (p[1] - p[2]) + p[3] - p[0])));
     }
@@ -379,6 +385,15 @@ JNIEXPORT void JNICALL FN(seek)(JNIEnv*, jobject, jint id, jfloat frac) {
     if (!s) return;
     Cmd c; c.type = kSeek; c.id = id; c.start = (int64_t)(std::min(1.f, std::max(0.f, frac)) * (float)s->frames());
     E().post(c);
+}
+JNIEXPORT jfloat JNICALL FN(peakLevel)(JNIEnv*, jobject, jint id, jfloat a, jfloat b) {
+    Sound* s = E().get(id);
+    if (!s) return 0.f;
+    int64_t n = s->frames();
+    int64_t i0 = (int64_t)(std::min(1.f, std::max(0.f, a)) * (float)n), i1 = (int64_t)(std::min(1.f, std::max(0.f, b)) * (float)n);
+    float m = 0.f;
+    for (int64_t i = i0 * s->channels, e = i1 * s->channels; i < e; i++) m = std::max(m, std::fabs(s->data[(size_t)i]));
+    return m;
 }
 JNIEXPORT jfloat JNICALL FN(progress)(JNIEnv*, jobject, jint id) { return E().progress(id); }
 JNIEXPORT jboolean JNICALL FN(isPlaying)(JNIEnv*, jobject, jint id) { return E().isPlaying(id); }

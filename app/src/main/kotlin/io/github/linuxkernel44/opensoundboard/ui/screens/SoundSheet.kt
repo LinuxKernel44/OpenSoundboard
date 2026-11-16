@@ -61,6 +61,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import io.github.linuxkernel44.opensoundboard.R
 import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.data.PlayMode
@@ -93,9 +97,13 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     val ctx = LocalContext.current
     var name by remember(id) { mutableStateOf(s.name) }
     var volume by remember(id) { mutableFloatStateOf(s.volume) }
+    var gainDb by remember(id) { mutableFloatStateOf(s.gainDb) }
     var confirmDelete by remember(id) { mutableStateOf(false) }
+    // Loudest sample of the trimmed range, measured once off the main thread (linear, 1.0 = full scale).
+    val peak by produceState(0f, id, s.trimStart, s.trimEnd, s.info) { value = withContext(Dispatchers.Default) { NativeEngine.peakLevel(id, s.trimStart, s.trimEnd) } }
 
     DisposableEffect(id) { onDispose { if (name.isNotBlank()) Library.update(id) { it.copy(name = name.trim()) } } }
+    LaunchedEffect(gainDb) { delay(250); if (gainDb != s.gainDb) Library.update(id) { it.copy(gainDb = gainDb) } }
     LaunchedEffect(volume) { delay(250); if (volume != s.volume) Library.update(id) { it.copy(volume = volume) } }
 
     // Drag handle: pull the sheet down to close it (or tap the handle). The scrim fades as the sheet moves.
@@ -144,6 +152,9 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                 Section(stringResource(R.string.volume)) {
                     LiquidSlider({ volume }, { volume = it }, 0f..1.5f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp))
                 }
+                Section(stringResource(R.string.gain)) {
+                    GainControl(gainDb, { gainDb = it }, peak, volume, backdrop)
+                }
                 Section(stringResource(R.string.trim)) { TrimEditor(s) }
                 Section(stringResource(R.string.audio_info)) { InfoTable(s) }
             }
@@ -160,6 +171,36 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                     .clickable(role = Role.Button) { dismiss() },
                 contentAlignment = Alignment.Center,
             ) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(p.text.copy(0.38f))) }
+        }
+    }
+}
+
+/** Gain in dB (-24..+24) on top of the volume, with the resulting peak level so boosts do not clip by accident. */
+@Composable
+private fun GainControl(gainDb: Float, onChange: (Float) -> Unit, peak: Float, volume: Float, backdrop: com.kyant.backdrop.Backdrop) {
+    val p = LocalAurora.current
+    fun db(x: Float) = if (x <= 1e-6f) Float.NEGATIVE_INFINITY else 20f * kotlin.math.log10(x)
+    fun fmt(v: Float) = if (v.isInfinite()) "-∞" else String.format("%.1f", v)
+    val after = db(peak * volume) + gainDb
+    val clips = after > 0f
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            AText(String.format("%+.1f dB", gainDb), size = 16.sp, mono = true, weight = FontWeight.SemiBold)
+            AText(stringResource(R.string.gain_peak, fmt(db(peak))), size = 12.sp, mono = true, color = p.muted)
+        }
+        LiquidSlider(
+            { gainDb }, { v -> onChange(if (kotlin.math.abs(v) < 0.4f) 0f else (v * 10f).roundToInt() / 10f) },
+            -24f..24f, 0.1f, backdrop, Modifier.padding(horizontal = 4.dp),
+        )
+        AText(
+            stringResource(if (clips) R.string.gain_clip else R.string.gain_after, fmt(after)),
+            size = 12.sp, mono = true, color = if (clips) p.danger else p.muted,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassAction(backdrop, { onChange(0f) }, label = stringResource(R.string.gain_reset))
+            GlassAction(backdrop, {
+                if (peak > 1e-6f) onChange(((20f * kotlin.math.log10(0.891f / (peak * volume.coerceAtLeast(0.01f)))) * 10f).roundToInt().coerceIn(-240, 240) / 10f)
+            }, label = stringResource(R.string.gain_normalize))
         }
     }
 }
