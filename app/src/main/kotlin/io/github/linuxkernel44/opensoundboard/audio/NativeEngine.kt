@@ -22,6 +22,8 @@ object NativeEngine {
     /** Playback position of the most recent voice of [id] as a fraction of the whole file. */
     external fun progress(id: Int): Float
     /** Largest absolute sample (linear, 1.0 = full scale) of sound [id] between two fractions of the file. */
+    /** Writes the sound between two fractions of the file, multiplied by [gain], as a 24-bit WAV. */
+    external fun exportWav(id: Int, startFraction: Float, endFraction: Float, gain: Float, path: String): Boolean
     external fun peakLevel(id: Int, startFraction: Float, endFraction: Float): Float
     external fun isPlaying(id: Int): Boolean
     external fun setMasterGain(gain: Float)

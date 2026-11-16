@@ -167,4 +167,8 @@
     <string name="gain_clip">Crête après gain : %1$s dBFS. Risque de distorsion.</string>
     <string name="gain_reset">0 dB</string>
     <string name="gain_normalize">Normaliser à -1 dBFS</string>
+    <string name="share_edited_body">Ce son a été découpé, ou son volume ou son gain a été modifié. Quelle version voulez-vous partager ?</string>
+    <string name="share_edited">Version modifiée (WAV)</string>
+    <string name="share_original">Fichier d\'origine</string>
+    <string name="share_failed">Impossible de préparer la version modifiée.</string>
 </resources>

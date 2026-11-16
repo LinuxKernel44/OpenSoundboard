@@ -386,6 +386,47 @@ JNIEXPORT void JNICALL FN(seek)(JNIEnv*, jobject, jint id, jfloat frac) {
     Cmd c; c.type = kSeek; c.id = id; c.start = (int64_t)(std::min(1.f, std::max(0.f, frac)) * (float)s->frames());
     E().post(c);
 }
+// Renders the edited sound (trim range, gain, same fades and soft limiter as playback) to a 24-bit PCM WAV file.
+JNIEXPORT jboolean JNICALL FN(exportWav)(JNIEnv* env, jobject, jint id, jfloat a, jfloat b, jfloat gain, jstring path) {
+    Sound* s = E().get(id);
+    if (!s) return JNI_FALSE;
+    int64_t n = s->frames();
+    int64_t i0 = (int64_t)(std::min(1.f, std::max(0.f, a)) * (float)n), i1 = (int64_t)(std::min(1.f, std::max(0.f, b)) * (float)n);
+    if (i1 <= i0) return JNI_FALSE;
+    const char* p = env->GetStringUTFChars(path, nullptr);
+    FILE* f = fopen(p, "wb");
+    env->ReleaseStringUTFChars(path, p);
+    if (!f) return JNI_FALSE;
+    const int ch = s->channels;
+    const int64_t frames = i1 - i0;
+    const uint32_t dataBytes = (uint32_t)(frames * ch * 3), rate = (uint32_t)s->sampleRate;
+    auto w32 = [&](uint32_t v) { fwrite(&v, 4, 1, f); };
+    auto w16 = [&](uint16_t v) { fwrite(&v, 2, 1, f); };
+    fwrite("RIFF", 1, 4, f); w32(36 + dataBytes); fwrite("WAVEfmt ", 1, 8, f);
+    w32(16); w16(1); w16((uint16_t)ch); w32(rate); w32(rate * ch * 3); w16((uint16_t)(ch * 3)); w16(24);
+    fwrite("data", 1, 4, f); w32(dataBytes);
+    const int fadeIn = i0 > 0 ? 160 : 64;
+    const bool cutEnd = i1 < n;
+    std::vector<uint8_t> buf;
+    buf.reserve(4096 * ch * 3);
+    bool ok = true;
+    for (int64_t k = 0; k < frames; k++) {
+        float g = gain;
+        if (k < fadeIn) g *= (float)k / (float)fadeIn;
+        if (cutEnd && frames - k < 256) g *= (float)(frames - k) / 256.f;
+        for (int c = 0; c < ch; c++) {
+            float x = s->data[(size_t)(i0 + k) * ch + c] * g, ax = std::fabs(x);
+            if (ax > 0.95f) { float y = 0.95f + 0.05f * std::tanh((ax - 0.95f) / 0.05f); x = x < 0.f ? -y : y; }
+            int32_t q = (int32_t)std::lrintf(x * 8388607.f);
+            q = std::max(-8388608, std::min(8388607, q));
+            buf.push_back((uint8_t)(q & 0xFF)); buf.push_back((uint8_t)((q >> 8) & 0xFF)); buf.push_back((uint8_t)((q >> 16) & 0xFF));
+        }
+        if (buf.size() >= 4096 * ch * 3) { ok = fwrite(buf.data(), 1, buf.size(), f) == buf.size() && ok; buf.clear(); }
+    }
+    if (!buf.empty()) ok = fwrite(buf.data(), 1, buf.size(), f) == buf.size() && ok;
+    fclose(f);
+    return ok ? JNI_TRUE : JNI_FALSE;
+}
 JNIEXPORT jfloat JNICALL FN(peakLevel)(JNIEnv*, jobject, jint id, jfloat a, jfloat b) {
     Sound* s = E().get(id);
     if (!s) return 0.f;

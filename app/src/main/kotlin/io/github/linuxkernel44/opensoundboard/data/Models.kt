@@ -31,6 +31,9 @@ data class SoundItem(
     val info: SourceInfo = SourceInfo(),
 )
 
+/** True when the sound plays differently from its file: trimmed, or a volume or gain change. */
+fun SoundItem.isEdited(): Boolean = trimStart > 0f || trimEnd < 1f || gainDb != 0f || volume != 1f
+
 /** Linear gain sent to the engine: the volume fader times the gain in dB. */
 fun SoundItem.linearGain(): Float = volume * Math.pow(10.0, gainDb / 20.0).toFloat()
 

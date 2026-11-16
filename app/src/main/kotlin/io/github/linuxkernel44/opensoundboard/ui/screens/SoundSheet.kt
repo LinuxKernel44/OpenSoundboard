@@ -27,6 +27,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import io.github.linuxkernel44.opensoundboard.ui.LocalToast
+import io.github.linuxkernel44.opensoundboard.ui.GlassDialog
+import io.github.linuxkernel44.opensoundboard.data.linearGain
+import io.github.linuxkernel44.opensoundboard.data.isEdited
 import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalDensity
@@ -99,6 +103,9 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     var volume by remember(id) { mutableFloatStateOf(s.volume) }
     var gainDb by remember(id) { mutableFloatStateOf(s.gainDb) }
     var confirmDelete by remember(id) { mutableStateOf(false) }
+    var shareDialog by remember(id) { mutableStateOf(false) }
+    val toast = LocalToast.current
+    val renderFailed = stringResource(R.string.share_failed)
     // Loudest sample of the trimmed range, measured once off the main thread (linear, 1.0 = full scale).
     val peak by produceState(0f, id, s.trimStart, s.trimEnd, s.info) { value = withContext(Dispatchers.Default) { NativeEngine.peakLevel(id, s.trimStart, s.trimEnd) } }
 
@@ -134,7 +141,7 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassAction(backdrop, { Player.preview(s) }, icon = Ico.Play, label = stringResource(R.string.play))
                     GlassAction(backdrop, { Library.update(id) { it.copy(favorite = !it.favorite) } }, icon = if (s.favorite) Ico.HeartFilled else Ico.Heart, label = stringResource(R.string.tab_favorites), accent = s.favorite)
-                    GlassAction(backdrop, { share(ctx, s) }, icon = Ico.Share, label = stringResource(R.string.share))
+                    GlassAction(backdrop, { if (s.isEdited()) shareDialog = true else shareOriginal(ctx, s) }, icon = Ico.Share, label = stringResource(R.string.share))
                     GlassAction(
                         backdrop, { if (confirmDelete) { Library.delete(id); onClose() } else confirmDelete = true },
                         icon = Ico.Trash, label = stringResource(if (confirmDelete) R.string.confirm_delete else R.string.delete), danger = true,
@@ -171,6 +178,19 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                     .clickable(role = Role.Button) { dismiss() },
                 contentAlignment = Alignment.Center,
             ) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(p.text.copy(0.38f))) }
+        }
+        // An edited sound (trimmed, or volume / gain changed) can be shared as the original file or as the edited version.
+        if (shareDialog) GlassDialog({ shareDialog = false }, stringResource(R.string.share)) {
+            AText(stringResource(R.string.share_edited_body), color = p.muted, size = 14.sp)
+            GlassAction(backdrop, {
+                shareDialog = false
+                scope.launch {
+                    val file = withContext(Dispatchers.IO) { renderEdited(ctx, s) }
+                    if (file != null) sendFile(ctx, file) else toast(renderFailed)
+                }
+            }, Modifier.fillMaxWidth(), label = stringResource(R.string.share_edited), accent = true)
+            GlassAction(backdrop, { shareDialog = false; shareOriginal(ctx, s) }, Modifier.fillMaxWidth(), label = stringResource(R.string.share_original))
+            GlassAction(backdrop, { shareDialog = false }, Modifier.fillMaxWidth(), label = stringResource(R.string.cancel))
         }
     }
 }
@@ -283,13 +303,26 @@ private fun TrimEditor(s: SoundItem) {
     }
 }
 
-private fun share(ctx: Context, s: SoundItem) {
+private fun safeName(s: SoundItem) = s.name.replace(Regex("[^\\p{L}\\p{N} _.-]"), "_").ifBlank { "sound" }
+
+private fun shareDir(ctx: Context) = File(ctx.cacheDir, "share").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+
+/** Shares the stored file exactly as imported. */
+private fun shareOriginal(ctx: Context, s: SoundItem) {
     val src = Library.soundFile(s)
-    val dir = File(ctx.cacheDir, "share").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
-    val safe = s.name.replace(Regex("[^\\p{L}\\p{N} _.-]"), "_").ifBlank { "sound" }
-    val out = File(dir, "$safe.${src.extension}")
+    val out = File(shareDir(ctx), "${safeName(s)}.${src.extension}")
     src.copyTo(out, overwrite = true)
-    val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", out)
+    sendFile(ctx, out)
+}
+
+/** Renders the sound as it plays in the app (trim, volume and gain applied) to a 24-bit WAV, or null on failure. */
+private fun renderEdited(ctx: Context, s: SoundItem): File? {
+    val out = File(shareDir(ctx), "${safeName(s)} (edited).wav")
+    return if (NativeEngine.exportWav(s.id, s.trimStart, s.trimEnd, s.linearGain(), out.absolutePath)) out else { out.delete(); null }
+}
+
+private fun sendFile(ctx: Context, file: File) {
+    val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", file)
     val i = Intent(Intent.ACTION_SEND).apply { type = "audio/*"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }

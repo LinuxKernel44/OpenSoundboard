@@ -167,4 +167,8 @@
     <string name="gain_clip">Peak after gain: %1$s dBFS. May distort.</string>
     <string name="gain_reset">0 dB</string>
     <string name="gain_normalize">Normalize to -1 dBFS</string>
+    <string name="share_edited_body">This sound has been trimmed, or its volume or gain was changed. Which version do you want to share?</string>
+    <string name="share_edited">Edited version (WAV)</string>
+    <string name="share_original">Original file</string>
+    <string name="share_failed">Could not prepare the edited version.</string>
 </resources>
