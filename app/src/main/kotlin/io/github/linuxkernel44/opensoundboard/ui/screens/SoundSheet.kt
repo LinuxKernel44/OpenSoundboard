@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import io.github.linuxkernel44.opensoundboard.ui.SeekWaveform
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.Job
 import androidx.compose.animation.core.animate
@@ -114,7 +115,8 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     val peak by produceState(0f, id, s.trimStart, s.trimEnd, s.info) { value = withContext(Dispatchers.Default) { NativeEngine.peakLevel(id, s.trimStart, s.trimEnd) } }
 
     DisposableEffect(id) { onDispose { if (name.isNotBlank()) Library.update(id) { it.copy(name = name.trim()) } } }
-    LaunchedEffect(gainDb) { delay(250); if (gainDb != s.gainDb) Library.update(id) { it.copy(gainDb = gainDb) } }
+    // gainDb is the raw slider value; the rounded value (with a small detent at 0 dB) is what is shown and saved.
+    LaunchedEffect(gainDb) { delay(250); val g = snapGain(gainDb); if (g != s.gainDb) Library.update(id) { it.copy(gainDb = g) } }
     LaunchedEffect(volume) { delay(250); if (volume != s.volume) Library.update(id) { it.copy(volume = volume) } }
 
     // Drag handle: pull the sheet down to close it (or tap the handle). The scrim fades as the sheet moves.
@@ -152,7 +154,7 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                     GlassField(name, { name = it }, stringResource(R.string.sound_name), Modifier.weight(1f))
                     GlassAction(backdrop, onClose, icon = Ico.Close)
                 }
-                Waveform(id, 64, Modifier.fillMaxWidth().height(44.dp), p.accent.copy(0.7f))
+                SeekWaveform(s, 64, Modifier.fillMaxWidth().height(56.dp), hPad = 0.dp, vPad = 6.dp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassAction(backdrop, { Player.preview(s) }, icon = Ico.Play, label = stringResource(R.string.play))
                     GlassAction(backdrop, { Library.update(id) { it.copy(favorite = !it.favorite) } }, icon = if (s.favorite) Ico.HeartFilled else Ico.Heart, label = stringResource(R.string.tab_favorites), accent = s.favorite)
@@ -210,23 +212,25 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     }
 }
 
+/** The gain actually applied: 0.1 dB steps, with a small detent at 0 dB. */
+private fun snapGain(raw: Float): Float = if (kotlin.math.abs(raw) < 0.4f) 0f else (raw * 10f).roundToInt() / 10f
+
 /** Gain in dB (-24..+24) on top of the volume, with the resulting peak level so boosts do not clip by accident. */
 @Composable
 private fun GainControl(gainDb: Float, onChange: (Float) -> Unit, peak: Float, volume: Float, backdrop: com.kyant.backdrop.Backdrop) {
     val p = LocalAurora.current
     fun db(x: Float) = if (x <= 1e-6f) Float.NEGATIVE_INFINITY else 20f * kotlin.math.log10(x)
     fun fmt(v: Float) = if (v.isInfinite()) "-∞" else String.format("%.1f", v)
-    val after = db(peak * volume) + gainDb
+    val shown = snapGain(gainDb)
+    val after = db(peak * volume) + shown
     val clips = after > 0f
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            AText(String.format("%+.1f dB", gainDb), size = 16.sp, mono = true, weight = FontWeight.SemiBold)
+            AText(String.format("%+.1f dB", shown), size = 16.sp, mono = true, weight = FontWeight.SemiBold)
             AText(stringResource(R.string.gain_peak, fmt(db(peak))), size = 12.sp, mono = true, color = p.muted)
         }
-        LiquidSlider(
-            { gainDb }, { v -> onChange(if (kotlin.math.abs(v) < 0.4f) 0f else (v * 10f).roundToInt() / 10f) },
-            -24f..24f, 0.1f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 0f,
-        )
+        // The slider moves by tiny steps while dragging, so it must keep the exact value: rounding it here made it jump or stick.
+        LiquidSlider({ gainDb }, onChange, -24f..24f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 0f)
         AText(
             stringResource(if (clips) R.string.gain_clip else R.string.gain_after, fmt(after)),
             size = 12.sp, mono = true, color = if (clips) p.danger else p.muted,
@@ -251,21 +255,28 @@ private fun InfoTable(s: SoundItem) {
             KeyValue(stringResource(R.string.info_channels), when (i.channels) { 1 -> stringResource(R.string.mono); 2 -> stringResource(R.string.stereo); else -> stringResource(R.string.channels_n, i.channels) })
             KeyValue(stringResource(R.string.info_bitrate), "${i.bitrateKbps} kb/s")
             KeyValue(stringResource(R.string.info_duration), fmtDuration(i.durationMs))
+            if (s.trimStart > 0f || s.trimEnd < 1f) KeyValue(stringResource(R.string.info_trimmed), fmtDuration(((s.trimEnd - s.trimStart) * i.durationMs).toLong()))
             KeyValue(stringResource(R.string.info_size), fmtSize(i.sizeBytes))
             if (i.gaplessDelay > 0 || i.gaplessPadding > 0) KeyValue(stringResource(R.string.info_gapless), stringResource(R.string.gapless_trimmed, i.gaplessDelay, i.gaplessPadding))
         }
     }
 }
 
-/** Waveform with two draggable handles. Trim is applied at playback; the file is never modified. */
+/**
+ * Waveform with two draggable handles. Moving them only changes a draft: the sound keeps playing and showing as before until
+ * you tap Apply trim. Reset trim goes back to the whole sound. The file itself is never modified.
+ */
 @Composable
 private fun TrimEditor(s: SoundItem) {
     val p = LocalAurora.current
+    val toast = LocalToast.current
     var a by remember(s.id) { mutableFloatStateOf(s.trimStart) }
     var b by remember(s.id) { mutableFloatStateOf(s.trimEnd) }
+    val dirty = kotlin.math.abs(a - s.trimStart) > 1e-4f || kotlin.math.abs(b - s.trimEnd) > 1e-4f
     // The shortest allowed trim is 50 ms, whatever the length of the sound.
     val minGap = if (s.info.durationMs > 0) (50f / s.info.durationMs).coerceIn(0.0005f, 0.5f) else 0.01f
     val density = LocalDensity.current
+    val applied = stringResource(R.string.trim_applied)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             // The handles sit near the screen edges: keep the system back gesture from stealing those drags.
@@ -286,7 +297,6 @@ private fun TrimEditor(s: SoundItem) {
                     }
                     apply(first.position.x)
                     horizontalDrag(first.id) { change -> apply(change.position.x); change.consume() }
-                    Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) }
                 }
             },
         ) {
@@ -311,8 +321,13 @@ private fun TrimEditor(s: SoundItem) {
             AText(fmtDuration(((b - a) * dur).toLong()), size = 12.sp, mono = true, weight = FontWeight.Medium)
             AText(fmtDuration((b * dur).toLong()), size = 12.sp, mono = true, color = p.muted)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (dirty) AText(stringResource(R.string.trim_pending), size = 12.sp, color = p.accent, weight = FontWeight.Medium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassAction(LocalBackdrop.current, { Player.preview(s, a, b) }, icon = Ico.Play, label = stringResource(R.string.play))
+            GlassAction(
+                LocalBackdrop.current, { if (dirty) { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) }; toast(applied) } },
+                icon = Ico.Check, label = stringResource(R.string.trim_apply), accent = dirty,
+            )
             GlassAction(LocalBackdrop.current, { a = 0f; b = 1f; Library.update(s.id) { it.copy(trimStart = 0f, trimEnd = 1f) } }, icon = Ico.Close, label = stringResource(R.string.trim_reset))
         }
     }

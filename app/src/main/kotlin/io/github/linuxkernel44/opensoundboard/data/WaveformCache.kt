@@ -13,7 +13,7 @@ import java.io.File
  * An entry is invalidated when the file or the gapless setting changes (both change the decoded length).
  */
 object WaveformCache {
-    const val RES = 128
+    const val RES = 512
     private lateinit var dir: File
     private val peaks = mutableStateMapOf<Int, FloatArray>()
     private val keys = HashMap<Int, Int>()
@@ -59,15 +59,14 @@ object WaveformCache {
     /** Full-resolution peaks of a sound, or null while unknown. Reading it from Compose observes updates. */
     fun base(id: Int): FloatArray? = peaks[id]
 
-    /** Reduces (max) or repeats the stored peaks to [n] bars. */
-    fun resample(base: FloatArray, n: Int): FloatArray = FloatArray(n) { b ->
-        if (n >= base.size) base[(b * base.size / n).coerceAtMost(base.size - 1)]
-        else {
-            val from = b * base.size / n
-            val to = maxOf(from + 1, (b + 1) * base.size / n)
-            var m = 0f
-            for (k in from until to) if (base[k] > m) m = base[k]
-            m
-        }
+    /** Reduces (max) or repeats the stored peaks to [n] bars covering the file fractions [from]..[to] (all of it by default). */
+    fun resample(base: FloatArray, n: Int, from: Float = 0f, to: Float = 1f): FloatArray = FloatArray(n) { b ->
+        val f0 = from + (to - from) * b / n
+        val f1 = from + (to - from) * (b + 1) / n
+        val i0 = (f0 * base.size).toInt().coerceIn(0, base.size - 1)
+        val i1 = kotlin.math.ceil(f1 * base.size).toInt().coerceIn(i0 + 1, base.size)
+        var m = 0f
+        for (k in i0 until i1) if (base[k] > m) m = base[k]
+        m
     }
 }

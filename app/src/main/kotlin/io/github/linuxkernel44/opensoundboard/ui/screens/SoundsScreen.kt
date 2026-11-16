@@ -63,7 +63,7 @@ import io.github.linuxkernel44.opensoundboard.ui.LocalBackdrop
 import io.github.linuxkernel44.opensoundboard.ui.LocalMeters
 import io.github.linuxkernel44.opensoundboard.ui.LocalToast
 import io.github.linuxkernel44.opensoundboard.ui.ScreenTitle
-import io.github.linuxkernel44.opensoundboard.ui.Waveform
+import io.github.linuxkernel44.opensoundboard.ui.SeekWaveform
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassAction
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassChip
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassPanel
@@ -221,38 +221,7 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                 )
             },
     ) {
-        // The waveform doubles as a seek bar: touch or drag to jump, and the played part is colored.
-        Box(
-            Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp)
-                // Nothing happens on touch-down: a tap jumps (or starts from there) on release, a horizontal drag scrubs,
-                // and a vertical swipe is left to the list so scrolling never plays a sound.
-                .pointerInput(s.id) {
-                    detectTapGestures(onTap = { o ->
-                        m.lastSoundId = s.id
-                        Player.scrubStart(cur, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), NativeEngine.isPlaying(cur.id))
-                    })
-                }
-                .pointerInput(s.id) {
-                    var wasPlaying = false
-                    detectHorizontalDragGestures(
-                        onDragStart = { o ->
-                            wasPlaying = NativeEngine.isPlaying(s.id)
-                            m.lastSoundId = s.id
-                            Player.scrubStart(cur, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), wasPlaying)
-                        },
-                    ) { change, _ ->
-                        change.consume()
-                        NativeEngine.seek(s.id, (change.position.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f))
-                    }
-                },
-        ) {
-            Waveform(
-                s.id, 32, Modifier.fillMaxSize().padding(10.dp, 11.dp, 10.dp, 11.dp),
-                color = p.accent.copy(if (playing) 1f else 0.6f),
-                range = if (s.trimStart > 0f || s.trimEnd < 1f) s.trimStart..s.trimEnd else null,
-                progress = if (playing) (Player.progress[s.id] ?: 0f) else -1f,
-            )
-        }
+        SeekWaveform(s, 32, Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp))
         if (s.favorite) Box(Modifier.align(Alignment.TopEnd).padding(9.dp).size(7.dp).clip(CircleShape).background(p.accent))
         Box(
             Modifier.align(Alignment.BottomEnd).padding(6.dp).size(30.dp).clip(CircleShape)

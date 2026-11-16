@@ -171,4 +171,8 @@
     <string name="share_edited">Version modifiée (WAV)</string>
     <string name="share_original">Fichier d\'origine</string>
     <string name="share_failed">Impossible de préparer la version modifiée.</string>
+    <string name="trim_apply">Appliquer la découpe</string>
+    <string name="trim_pending">Pas encore appliquée. Touchez Appliquer la découpe pour l\'utiliser.</string>
+    <string name="trim_applied">Découpe appliquée</string>
+    <string name="info_trimmed">Durée découpée</string>
 </resources>

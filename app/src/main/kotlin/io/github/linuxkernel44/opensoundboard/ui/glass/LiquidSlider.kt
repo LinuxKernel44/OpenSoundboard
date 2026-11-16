@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -79,6 +80,10 @@ fun LiquidSlider(
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val animationScope = rememberCoroutineScope()
         var didDrag by remember { mutableStateOf(false) }
+        // The value being dragged. The animation's targetValue only catches up a frame later, so several touch events
+        // arriving in one frame (always the case on 120 Hz screens) each restarted from the old target and most of the
+        // finger's movement was lost: the thumb lagged and felt stuck. Accumulating here keeps every bit of movement.
+        var dragValue by remember { mutableFloatStateOf(value()) }
         val dampedDragAnimation = remember(animationScope) {
             DampedDragAnimation(
                 animationScope = animationScope,
@@ -87,10 +92,10 @@ fun LiquidSlider(
                 visibilityThreshold = visibilityThreshold,
                 initialScale = 1f,
                 pressedScale = 1.5f,
-                onDragStarted = {},
+                onDragStarted = { dragValue = value() },
                 onDragStopped = {
                     if (didDrag) {
-                        onValueChange(targetValue)
+                        onValueChange(dragValue)
                     }
                 },
                 onDrag = { _, dragAmount ->
@@ -98,10 +103,9 @@ fun LiquidSlider(
                         didDrag = dragAmount.x != 0f
                     }
                     val delta = (valueRange.endInclusive - valueRange.start) * (dragAmount.x / trackWidth)
-                    onValueChange(
-                        if (isLtr) (targetValue + delta).coerceIn(valueRange)
-                        else (targetValue - delta).coerceIn(valueRange)
-                    )
+                    dragValue = if (isLtr) (dragValue + delta).coerceIn(valueRange) else (dragValue - delta).coerceIn(valueRange)
+                    onValueChange(dragValue)
+                    updateValue(dragValue)   // move the thumb now instead of waiting for the state to be observed
                 }
             )
         }

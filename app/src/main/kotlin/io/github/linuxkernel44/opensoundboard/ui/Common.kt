@@ -14,6 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import io.github.linuxkernel44.opensoundboard.data.SoundItem
+import io.github.linuxkernel44.opensoundboard.audio.Player
+import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -123,23 +132,76 @@ fun KeyValue(key: String, value: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Mini waveform from the decoded sound, shown on pads and in the trim editor. */
+/**
+ * Waveform from the cached peaks. [window] shows only that part of the file (a trimmed sound is shown as its trimmed
+ * version); [progress] (0..1 of what is shown) colors the part already played.
+ */
 @Composable
-fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, progress: Float = -1f, range: ClosedFloatingPointRange<Float>? = null) {
+fun Waveform(
+    id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent,
+    progress: Float = -1f, window: ClosedFloatingPointRange<Float>? = null,
+) {
     val base = WaveformCache.base(id)
-    val peaks = remember(base, buckets) { base?.let { WaveformCache.resample(it, buckets) } }
+    val from = window?.start ?: 0f
+    val to = window?.endInclusive ?: 1f
+    val peaks = remember(base, buckets, from, to) { base?.let { WaveformCache.resample(it, buckets, from, to) } }
     Canvas(modifier) {
         val p = peaks ?: return@Canvas
         val w = size.width / p.size
         p.forEachIndexed { i, v ->
             val h = (v.coerceIn(0f, 1f) * size.height).coerceAtLeast(2f)
             // With a progress value, played bars are solid and the rest is dimmed.
-            val pos = (i + 0.5f) / p.size
-            var c = if (progress < 0f || pos <= progress) color else color.copy(alpha = color.alpha * 0.3f)
-            // Bars outside the trimmed range are shown faint, so the pad shows what will actually play.
-            if (range != null && pos !in range) c = c.copy(alpha = c.alpha * 0.28f)
+            val c = if (progress < 0f || (i + 0.5f) / p.size <= progress) color else color.copy(alpha = color.alpha * 0.3f)
             drawRoundRect(c, Offset(i * w + w * 0.2f, (size.height - h) / 2f), Size(w * 0.6f, h), CornerRadius(w * 0.3f))
         }
+    }
+}
+
+/**
+ * A sound's waveform that doubles as a seek bar, used on pads and at the top of the sound sheet. It shows the sound as
+ * trimmed, colors the part already played, and a tap or a horizontal drag jumps to that point (a tap on a silent pad
+ * starts it from there). Nothing happens on touch-down and vertical swipes are left to the list, so scrolling never plays.
+ */
+@Composable
+fun SeekWaveform(s: SoundItem, buckets: Int, modifier: Modifier = Modifier, hPad: Dp = 10.dp, vPad: Dp = 11.dp) {
+    val p = LocalAurora.current
+    val m = LocalMeters.current
+    val cur by rememberUpdatedState(s)   // gesture handlers must see the current trim, volume and mode
+    val playing = Player.playing.contains(s.id)
+    val trimmed = s.trimStart > 0f || s.trimEnd < 1f
+    val span = (s.trimEnd - s.trimStart).coerceAtLeast(0.0001f)
+    val progress = if (playing) (((Player.progress[s.id] ?: 0f) - s.trimStart) / span).coerceIn(0f, 1f) else -1f
+    val padPx = with(LocalDensity.current) { hPad.toPx() }
+    /** Touch x (in pixels over the whole element) to a fraction of the file, inside the trimmed range. */
+    fun fileFraction(x: Float, width: Int): Float {
+        val inner = (width - 2 * padPx).coerceAtLeast(1f)
+        val f = ((x - padPx) / inner).coerceIn(0f, 0.999f)
+        return cur.trimStart + f * (cur.trimEnd - cur.trimStart)
+    }
+    Box(
+        modifier
+            .pointerInput(s.id) {
+                detectTapGestures(onTap = { o ->
+                    m.lastSoundId = cur.id
+                    Player.scrubStart(cur, fileFraction(o.x, size.width), NativeEngine.isPlaying(cur.id))
+                })
+            }
+            .pointerInput(s.id) {
+                detectHorizontalDragGestures(
+                    onDragStart = { o ->
+                        m.lastSoundId = cur.id
+                        Player.scrubStart(cur, fileFraction(o.x, size.width), NativeEngine.isPlaying(cur.id))
+                    },
+                ) { change, _ ->
+                    change.consume()
+                    NativeEngine.seek(cur.id, fileFraction(change.position.x, size.width))
+                }
+            },
+    ) {
+        Waveform(
+            s.id, buckets, Modifier.fillMaxSize().padding(hPad, vPad), color = p.accent.copy(if (playing) 1f else 0.6f),
+            progress = progress, window = if (trimmed) s.trimStart..s.trimEnd else null,
+        )
     }
 }
 
