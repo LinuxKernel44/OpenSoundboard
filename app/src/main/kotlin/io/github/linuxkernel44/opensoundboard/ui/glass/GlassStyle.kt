@@ -11,8 +11,9 @@ import io.github.linuxkernel44.opensoundboard.data.Settings
 
 /** User-tunable Liquid Glass look (Settings > Liquid Glass). Every glass surface reads from here. */
 object GlassStyle {
+    /** Opacity setting at which the palette alphas apply unchanged (the design reference, not the default setting). */
     const val DEFAULT_OPACITY = 0.4f
-    /** 1.0 at the default opacity, so palette alphas are the design reference. */
+    /** 1.0 at the reference opacity; 0 gives fully clear glass. */
     val opacityFactor: Float get() = Settings.glassOpacity / DEFAULT_OPACITY
 
     fun tint(c: Color): Color = c.copy(alpha = (c.alpha * opacityFactor).coerceIn(0f, 0.95f))

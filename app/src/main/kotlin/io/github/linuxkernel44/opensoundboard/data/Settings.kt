@@ -9,10 +9,10 @@ import androidx.compose.runtime.setValue
 
 object Settings {
     // Factory values, also used by the double-tap reset of the sliders.
-    const val DEFAULT_GLASS_OPACITY = 0.4f
-    const val DEFAULT_GLASS_BLUR = 10f
-    const val DEFAULT_GLASS_REFRACTION = 0.35f
-    const val DEFAULT_GLASS_SATURATION = 1.5f
+    const val DEFAULT_GLASS_OPACITY = 0.0f
+    const val DEFAULT_GLASS_BLUR = 2f
+    const val DEFAULT_GLASS_REFRACTION = 0.73f
+    const val DEFAULT_GLASS_SATURATION = 1.79f
     const val DEFAULT_GLASS_HIGHLIGHT = 1f
 
     private lateinit var prefs: android.content.SharedPreferences
@@ -25,12 +25,12 @@ object Settings {
     var recordSampleRate by mutableIntStateOf(48000)
     var recordFloat by mutableStateOf(false)         // false = 24-bit PCM, true = 32-bit float
     var themeMode by mutableIntStateOf(0)            // 0 system, 1 light, 2 dark
-    var glassOpacity by mutableFloatStateOf(0.4f)     // surface tint, 0 = clear glass
-    var glassBlur by mutableFloatStateOf(10f)         // dp
-    var glassRefraction by mutableFloatStateOf(0.35f) // 0 = flat, 1 = strong lens
+    var glassOpacity by mutableFloatStateOf(DEFAULT_GLASS_OPACITY)     // surface tint, 0 = clear glass
+    var glassBlur by mutableFloatStateOf(DEFAULT_GLASS_BLUR)         // dp
+    var glassRefraction by mutableFloatStateOf(DEFAULT_GLASS_REFRACTION) // 0 = flat, 1 = strong lens
     var glassChromatic by mutableStateOf(false)       // dispersion on refracted edges
-    var glassSaturation by mutableFloatStateOf(1.5f)
-    var glassHighlight by mutableFloatStateOf(1f)     // edge light
+    var glassSaturation by mutableFloatStateOf(DEFAULT_GLASS_SATURATION)
+    var glassHighlight by mutableFloatStateOf(DEFAULT_GLASS_HIGHLIGHT)     // edge light
     var gapless by mutableStateOf(true)              // trim encoder delay / padding so loops repeat seamlessly
     var autoUpdateCheck by mutableStateOf(true)      // look for a new release at launch (at most every 12 h)
     var lastUpdateCheck = 0L
@@ -54,12 +54,12 @@ object Settings {
         autoUpdateCheck = prefs.getBoolean("autoUpd", true)
         lastUpdateCheck = prefs.getLong("lastUpd", 0L)
         skippedVersion = prefs.getString("skipVer", "") ?: ""
-        glassOpacity = prefs.getFloat("gOpacity", 0.4f)
-        glassBlur = prefs.getFloat("gBlur", 10f)
-        glassRefraction = prefs.getFloat("gRefr", 0.35f)
+        glassOpacity = prefs.getFloat("gOpacity", DEFAULT_GLASS_OPACITY)
+        glassBlur = prefs.getFloat("gBlur", DEFAULT_GLASS_BLUR)
+        glassRefraction = prefs.getFloat("gRefr", DEFAULT_GLASS_REFRACTION)
         glassChromatic = prefs.getBoolean("gChroma", false)
-        glassSaturation = prefs.getFloat("gSat", 1.5f)
-        glassHighlight = prefs.getFloat("gHigh", 1f)
+        glassSaturation = prefs.getFloat("gSat", DEFAULT_GLASS_SATURATION)
+        glassHighlight = prefs.getFloat("gHigh", DEFAULT_GLASS_HIGHLIGHT)
         background = prefs.getInt("bg", 0).coerceIn(0, 4)
     }
 
