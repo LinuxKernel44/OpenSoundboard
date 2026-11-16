@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.Job
+import androidx.compose.animation.core.animate
 import io.github.linuxkernel44.opensoundboard.ui.LocalToast
 import io.github.linuxkernel44.opensoundboard.ui.GlassDialog
 import io.github.linuxkernel44.opensoundboard.data.linearGain
@@ -115,21 +118,32 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     LaunchedEffect(volume) { delay(250); if (volume != s.volume) Library.update(id) { it.copy(volume = volume) } }
 
     // Drag handle: pull the sheet down to close it (or tap the handle). The scrim fades as the sheet moves.
-    val offsetY = remember { Animatable(0f) }
+    // The offset is plain state updated synchronously while dragging; only the settle animation runs in a coroutine,
+    // and a new drag cancels it, so a late update can never leave the sheet stuck half way.
+    var sheetOffset by remember { mutableFloatStateOf(0f) }
+    var settleJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val dragState = rememberDraggableState { dy -> scope.launch { offsetY.snapTo((offsetY.value + dy).coerceAtLeast(0f)) } }
-    fun dismiss() { scope.launch { offsetY.animateTo(3000f, tween(220)); onClose() } }
+    val screenPx = with(density) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    fun settleTo(target: Float, then: () -> Unit = {}) {
+        settleJob?.cancel()
+        settleJob = scope.launch {
+            animate(sheetOffset, target, animationSpec = if (target == 0f) spring(dampingRatio = 0.8f, stiffness = 500f) else tween(220)) { v, _ -> sheetOffset = v }
+            then()
+        }
+    }
+    fun dismiss() = settleTo(screenPx) { onClose() }
+    val dragState = rememberDraggableState { dy -> sheetOffset = (sheetOffset + dy).coerceAtLeast(0f) }
 
     Box(
-        Modifier.fillMaxSize().background(p.scrim.copy(alpha = p.scrim.alpha * (1f - (offsetY.value / 1200f).coerceIn(0f, 1f))))
+        Modifier.fillMaxSize().background(p.scrim.copy(alpha = p.scrim.alpha * (1f - (sheetOffset / (screenPx * 0.5f)).coerceIn(0f, 1f))))
             .clickable(MutableInteractionSource(), null, onClick = { dismiss() }),
         contentAlignment = Alignment.BottomCenter,
     ) {
         GlassPanel(
             backdrop,
             Modifier.statusBarsPadding().padding(top = 24.dp).fillMaxWidth().fillMaxHeight(0.9f)
-                .graphicsLayer { translationY = offsetY.value }
+                .graphicsLayer { translationY = sheetOffset }
                 .clickable(MutableInteractionSource(), null) {},
             radius = 36.dp, strong = true,
         ) {
@@ -167,15 +181,14 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                 Section(stringResource(R.string.trim)) { TrimEditor(s) }
                 Section(stringResource(R.string.audio_info)) { InfoTable(s) }
             }
-            // Large touch area (full width, 36 dp tall) around a small visible pill.
+            // Large touch area (full width, 48 dp tall) around a small visible pill.
             Box(
-                Modifier.align(Alignment.TopCenter).fillMaxWidth().height(36.dp)
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().height(48.dp)
                     .draggable(
                         state = dragState, orientation = Orientation.Vertical,
-                        onDragStopped = { v ->
-                            if (offsetY.value > with(density) { 120.dp.toPx() } || v > 1500f) { offsetY.animateTo(3000f, tween(220)); onClose() }
-                            else offsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
-                        },
+                        onDragStarted = { settleJob?.cancel() },
+                        // Closes after a pull of about 56 dp or a quick flick; the finger does not have to reach the bottom.
+                        onDragStopped = { v -> if (sheetOffset > with(density) { 56.dp.toPx() } || v > 700f) dismiss() else settleTo(0f) },
                     )
                     .clickable(role = Role.Button) { dismiss() },
                 contentAlignment = Alignment.Center,
