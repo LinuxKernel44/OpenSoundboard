@@ -56,6 +56,20 @@ val LocalMeters = staticCompositionLocalOf { Meters() }
 val LocalBackdrop = staticCompositionLocalOf<Backdrop> { error("no backdrop") }
 val LocalToast = staticCompositionLocalOf<(String) -> Unit> { {} }
 
+/** A linear level (1.0 = unity) as decibels, e.g. 0.5 -> "-6.0 dB". */
+fun fmtDb(linear: Float): String = when {
+    linear <= 0.0005f -> "-∞ dB"
+    else -> { val db = 20f * kotlin.math.log10(linear); if (kotlin.math.abs(db) < 0.05f) "0.0 dB" else String.format("%+.1f dB", db) }
+}
+
+/** The decibel value shown above a volume slider, right-aligned. */
+@Composable
+fun DbReadout(linear: Float, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.End) {
+        AText(fmtDb(linear), size = 13.sp, mono = true, weight = FontWeight.Medium, color = LocalAurora.current.muted)
+    }
+}
+
 fun khz(rate: Int): String = if (rate % 1000 == 0) "${rate / 1000}" else String.format("%.1f", rate / 1000f)
 
 fun shortInfo(i: SourceInfo): String = buildString {

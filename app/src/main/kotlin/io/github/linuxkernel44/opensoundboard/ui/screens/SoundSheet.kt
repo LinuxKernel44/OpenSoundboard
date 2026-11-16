@@ -73,6 +73,7 @@ import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.data.PlayMode
 import io.github.linuxkernel44.opensoundboard.data.SoundItem
+import io.github.linuxkernel44.opensoundboard.ui.DbReadout
 import io.github.linuxkernel44.opensoundboard.ui.GlassField
 import io.github.linuxkernel44.opensoundboard.ui.KeyValue
 import io.github.linuxkernel44.opensoundboard.ui.LocalBackdrop
@@ -157,6 +158,7 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                     Segmented(backdrop, listOf(stringResource(R.string.mode_one_shot), stringResource(R.string.mode_loop), stringResource(R.string.mode_hold)), s.mode.ordinal, { i -> Library.update(id) { it.copy(mode = PlayMode.entries[i]) } })
                 }
                 Section(stringResource(R.string.volume)) {
+                    DbReadout(volume)
                     LiquidSlider({ volume }, { volume = it }, 0f..1.5f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 1f)
                 }
                 Section(stringResource(R.string.gain)) {

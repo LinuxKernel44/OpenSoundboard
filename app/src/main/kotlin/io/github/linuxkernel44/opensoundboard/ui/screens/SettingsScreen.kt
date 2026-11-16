@@ -42,6 +42,7 @@ import io.github.linuxkernel44.opensoundboard.R
 import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.data.Settings
+import io.github.linuxkernel44.opensoundboard.ui.DbReadout
 import io.github.linuxkernel44.opensoundboard.ui.KeyValue
 import io.github.linuxkernel44.opensoundboard.ui.LocalBackdrop
 import io.github.linuxkernel44.opensoundboard.ui.LocalMeters
@@ -206,6 +207,7 @@ fun SettingsScreen(bottomInset: Dp) {
                 }
             }
             Section(stringResource(R.string.master_volume)) {
+                DbReadout(Settings.masterVolume)
                 LiquidSlider({ Settings.masterVolume }, { Settings.masterVolume = it; NativeEngine.setMasterGain(it) }, 0f..1f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 1f)
             }
             Section(stringResource(R.string.backup)) {
