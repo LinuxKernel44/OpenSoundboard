@@ -150,7 +150,7 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                     Segmented(backdrop, listOf(stringResource(R.string.mode_one_shot), stringResource(R.string.mode_loop), stringResource(R.string.mode_hold)), s.mode.ordinal, { i -> Library.update(id) { it.copy(mode = PlayMode.entries[i]) } })
                 }
                 Section(stringResource(R.string.volume)) {
-                    LiquidSlider({ volume }, { volume = it }, 0f..1.5f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp))
+                    LiquidSlider({ volume }, { volume = it }, 0f..1.5f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 1f)
                 }
                 Section(stringResource(R.string.gain)) {
                     GainControl(gainDb, { gainDb = it }, peak, volume, backdrop)
@@ -190,7 +190,7 @@ private fun GainControl(gainDb: Float, onChange: (Float) -> Unit, peak: Float, v
         }
         LiquidSlider(
             { gainDb }, { v -> onChange(if (kotlin.math.abs(v) < 0.4f) 0f else (v * 10f).roundToInt() / 10f) },
-            -24f..24f, 0.1f, backdrop, Modifier.padding(horizontal = 4.dp),
+            -24f..24f, 0.1f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 0f,
         )
         AText(
             stringResource(if (clips) R.string.gain_clip else R.string.gain_after, fmt(after)),

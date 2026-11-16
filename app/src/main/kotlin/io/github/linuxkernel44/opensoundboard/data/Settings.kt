@@ -8,6 +8,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 object Settings {
+    // Factory values, also used by the double-tap reset of the sliders.
+    const val DEFAULT_GLASS_OPACITY = 0.4f
+    const val DEFAULT_GLASS_BLUR = 10f
+    const val DEFAULT_GLASS_REFRACTION = 0.35f
+    const val DEFAULT_GLASS_SATURATION = 1.5f
+    const val DEFAULT_GLASS_HIGHLIGHT = 1f
+
     private lateinit var prefs: android.content.SharedPreferences
 
     var outputDeviceId by mutableIntStateOf(0)       // 0 = system default
@@ -57,7 +64,7 @@ object Settings {
     }
 
     fun resetGlass() {
-        glassOpacity = 0.4f; glassBlur = 10f; glassRefraction = 0.35f; glassChromatic = false; glassSaturation = 1.5f; glassHighlight = 1f
+        glassOpacity = DEFAULT_GLASS_OPACITY; glassBlur = DEFAULT_GLASS_BLUR; glassRefraction = DEFAULT_GLASS_REFRACTION; glassChromatic = false; glassSaturation = DEFAULT_GLASS_SATURATION; glassHighlight = DEFAULT_GLASS_HIGHLIGHT
         save()
     }
 

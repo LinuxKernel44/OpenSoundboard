@@ -168,11 +168,11 @@ fun SettingsScreen(bottomInset: Dp) {
             Section(stringResource(R.string.glass_title)) {
                 GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        GlassSliderRow(stringResource(R.string.glass_opacity), "${(Settings.glassOpacity * 100).toInt()}%", { Settings.glassOpacity }, 0f..1f) { Settings.glassOpacity = it; Settings.save() }
-                        GlassSliderRow(stringResource(R.string.glass_blur), "${Settings.glassBlur.toInt()} dp", { Settings.glassBlur }, 0f..30f) { Settings.glassBlur = it; Settings.save() }
-                        GlassSliderRow(stringResource(R.string.glass_refraction), "${(Settings.glassRefraction * 100).toInt()}%", { Settings.glassRefraction }, 0f..1f) { Settings.glassRefraction = it; Settings.save() }
-                        GlassSliderRow(stringResource(R.string.glass_saturation), "${(Settings.glassSaturation * 100).toInt()}%", { Settings.glassSaturation }, 0f..2.5f) { Settings.glassSaturation = it; Settings.save() }
-                        GlassSliderRow(stringResource(R.string.glass_highlight), "${(Settings.glassHighlight * 100).toInt()}%", { Settings.glassHighlight }, 0f..1f) { Settings.glassHighlight = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_opacity), "${(Settings.glassOpacity * 100).toInt()}%", { Settings.glassOpacity }, 0f..1f, Settings.DEFAULT_GLASS_OPACITY) { Settings.glassOpacity = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_blur), "${Settings.glassBlur.toInt()} dp", { Settings.glassBlur }, 0f..30f, Settings.DEFAULT_GLASS_BLUR) { Settings.glassBlur = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_refraction), "${(Settings.glassRefraction * 100).toInt()}%", { Settings.glassRefraction }, 0f..1f, Settings.DEFAULT_GLASS_REFRACTION) { Settings.glassRefraction = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_saturation), "${(Settings.glassSaturation * 100).toInt()}%", { Settings.glassSaturation }, 0f..2.5f, Settings.DEFAULT_GLASS_SATURATION) { Settings.glassSaturation = it; Settings.save() }
+                        GlassSliderRow(stringResource(R.string.glass_highlight), "${(Settings.glassHighlight * 100).toInt()}%", { Settings.glassHighlight }, 0f..1f, Settings.DEFAULT_GLASS_HIGHLIGHT) { Settings.glassHighlight = it; Settings.save() }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 AText(stringResource(R.string.glass_chromatic), size = 16.sp)
@@ -206,7 +206,7 @@ fun SettingsScreen(bottomInset: Dp) {
                 }
             }
             Section(stringResource(R.string.master_volume)) {
-                LiquidSlider({ Settings.masterVolume }, { Settings.masterVolume = it; NativeEngine.setMasterGain(it) }, 0f..1f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp))
+                LiquidSlider({ Settings.masterVolume }, { Settings.masterVolume = it; NativeEngine.setMasterGain(it) }, 0f..1f, 0.01f, backdrop, Modifier.padding(horizontal = 4.dp), defaultValue = 1f)
             }
             Section(stringResource(R.string.backup)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -305,14 +305,14 @@ private fun openUrl(ctx: android.content.Context, url: String) {
 }
 
 @Composable
-private fun GlassSliderRow(label: String, valueText: String, value: () -> Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+private fun GlassSliderRow(label: String, valueText: String, value: () -> Float, range: ClosedFloatingPointRange<Float>, default: Float, onChange: (Float) -> Unit) {
     val p = LocalAurora.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             AText(label, size = 15.sp)
             AText(valueText, size = 13.sp, color = p.muted, mono = true)
         }
-        LiquidSlider(value, onChange, range, (range.endInclusive - range.start) / 200f, LocalBackdrop.current, Modifier.padding(horizontal = 4.dp))
+        LiquidSlider(value, onChange, range, (range.endInclusive - range.start) / 200f, LocalBackdrop.current, Modifier.padding(horizontal = 4.dp), defaultValue = default)
     }
 }
 

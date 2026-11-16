@@ -2,7 +2,10 @@
 package io.github.linuxkernel44.opensoundboard.ui.glass
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -53,7 +56,9 @@ fun LiquidSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     visibilityThreshold: Float,
     backdrop: Backdrop,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Double-tapping the slider sets this value (null disables the shortcut). */
+    defaultValue: Float? = null,
 ) {
     val isLightTheme = !io.github.linuxkernel44.opensoundboard.ui.theme.LocalAurora.current.dark
     val accentColor =
@@ -66,7 +71,7 @@ fun LiquidSlider(
     val trackBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(
-        modifier.fillMaxWidth(),
+        modifier.fillMaxWidth().doubleTapToReset(defaultValue) { onValueChange(it) },
         contentAlignment = Alignment.CenterStart
     ) {
         val trackWidth = constraints.maxWidth
@@ -211,3 +216,27 @@ fun LiquidSlider(
         )
     }
 }
+
+/**
+ * Calls [onReset] with [default] when the element is tapped twice quickly. It watches the touches in the Final pass,
+ * after the slider has handled them (a tap normally moves the thumb), so the reset is applied last and wins.
+ */
+private fun Modifier.doubleTapToReset(default: Float?, onReset: (Float) -> Unit): Modifier =
+    if (default == null) this else pointerInput(default) {
+        var lastUp = 0L
+        var lastPos = androidx.compose.ui.geometry.Offset.Zero
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
+            val slop = viewConfiguration.touchSlop
+            var moved = false
+            var upTime = 0L
+            while (true) {
+                val change = awaitPointerEvent(PointerEventPass.Final).changes.firstOrNull { it.id == down.id } ?: break
+                if ((change.position - down.position).getDistance() > slop) moved = true
+                if (!change.pressed) { upTime = change.uptimeMillis; break }
+            }
+            if (moved || upTime == 0L) lastUp = 0L
+            else if (lastUp != 0L && upTime - lastUp < 320L && (down.position - lastPos).getDistance() < slop * 8f) { lastUp = 0L; onReset(default) }
+            else { lastUp = upTime; lastPos = down.position }
+        }
+    }
