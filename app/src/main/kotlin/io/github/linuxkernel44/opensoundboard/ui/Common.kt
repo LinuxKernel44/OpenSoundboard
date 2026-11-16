@@ -111,7 +111,7 @@ fun KeyValue(key: String, value: String, modifier: Modifier = Modifier) {
 
 /** Mini waveform from the decoded sound, shown on pads and in the trim editor. */
 @Composable
-fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, progress: Float = -1f) {
+fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color = LocalAurora.current.accent, progress: Float = -1f, range: ClosedFloatingPointRange<Float>? = null) {
     val base = WaveformCache.base(id)
     val peaks = remember(base, buckets) { base?.let { WaveformCache.resample(it, buckets) } }
     Canvas(modifier) {
@@ -120,7 +120,10 @@ fun Waveform(id: Int, buckets: Int, modifier: Modifier = Modifier, color: Color 
         p.forEachIndexed { i, v ->
             val h = (v.coerceIn(0f, 1f) * size.height).coerceAtLeast(2f)
             // With a progress value, played bars are solid and the rest is dimmed.
-            val c = if (progress < 0f || (i + 0.5f) / p.size <= progress) color else color.copy(alpha = color.alpha * 0.3f)
+            val pos = (i + 0.5f) / p.size
+            var c = if (progress < 0f || pos <= progress) color else color.copy(alpha = color.alpha * 0.3f)
+            // Bars outside the trimmed range are shown faint, so the pad shows what will actually play.
+            if (range != null && pos !in range) c = c.copy(alpha = c.alpha * 0.28f)
             drawRoundRect(c, Offset(i * w + w * 0.2f, (size.height - h) / 2f), Size(w * 0.6f, h), CornerRadius(w * 0.3f))
         }
     }

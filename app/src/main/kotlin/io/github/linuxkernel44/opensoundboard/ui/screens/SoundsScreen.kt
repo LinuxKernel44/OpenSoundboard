@@ -30,7 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -180,6 +182,8 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
     val p = LocalAurora.current
     val backdrop = LocalBackdrop.current
     val m = LocalMeters.current
+    // Gesture handlers outlive recompositions, so they must read the current sound (trim, volume, mode), not the first one.
+    val cur by rememberUpdatedState(s)
     val playing = Player.playing.contains(s.id)
     val scale = if (playing) 0.96f else 1f
     Box(
@@ -195,16 +199,16 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                     if (playing) drawRect(p.accent.copy(0.28f))
                 },
             )
-            .pointerInput(s.id, s.mode) {
+            .pointerInput(s.id) {
                 // A tap plays on release; a long press does nothing. Hold-mode pads are the exception:
                 // they play for as long as the finger stays down.
                 detectTapGestures(
                     onPress = {
-                        if (s.mode == PlayMode.HOLD) {
+                        if (cur.mode == PlayMode.HOLD) {
                             // Wait a moment first, so a scroll that starts on this pad (which cancels the press) never plays it.
                             when (withTimeoutOrNull(120) { tryAwaitRelease() }) {
-                                null -> { m.lastSoundId = s.id; Player.press(s); tryAwaitRelease(); Player.release(s) }
-                                true -> { m.lastSoundId = s.id; Player.press(s); Player.releaseLater(s, 150) }
+                                null -> { m.lastSoundId = cur.id; Player.press(cur); tryAwaitRelease(); Player.release(cur) }
+                                true -> { m.lastSoundId = cur.id; Player.press(cur); Player.releaseLater(cur, 150) }
                                 else -> Unit
                             }
                         }
@@ -212,7 +216,7 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
                     // Setting onLongPress (even empty) makes detectTapGestures cancel onTap for long presses.
                     onLongPress = { },
                     onTap = {
-                        if (s.mode != PlayMode.HOLD) { m.lastSoundId = s.id; Player.press(s) }
+                        if (cur.mode != PlayMode.HOLD) { m.lastSoundId = cur.id; Player.press(cur) }
                     },
                 )
             },
@@ -222,19 +226,19 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
             Modifier.align(Alignment.TopStart).fillMaxWidth().height(46.dp)
                 // Nothing happens on touch-down: a tap jumps (or starts from there) on release, a horizontal drag scrubs,
                 // and a vertical swipe is left to the list so scrolling never plays a sound.
-                .pointerInput(s.id, s.mode) {
+                .pointerInput(s.id) {
                     detectTapGestures(onTap = { o ->
                         m.lastSoundId = s.id
-                        Player.scrubStart(s, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), NativeEngine.isPlaying(s.id))
+                        Player.scrubStart(cur, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), NativeEngine.isPlaying(cur.id))
                     })
                 }
-                .pointerInput(s.id, s.mode) {
+                .pointerInput(s.id) {
                     var wasPlaying = false
                     detectHorizontalDragGestures(
                         onDragStart = { o ->
                             wasPlaying = NativeEngine.isPlaying(s.id)
                             m.lastSoundId = s.id
-                            Player.scrubStart(s, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), wasPlaying)
+                            Player.scrubStart(cur, (o.x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f), wasPlaying)
                         },
                     ) { change, _ ->
                         change.consume()
@@ -245,6 +249,7 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
             Waveform(
                 s.id, 32, Modifier.fillMaxSize().padding(10.dp, 11.dp, 10.dp, 11.dp),
                 color = p.accent.copy(if (playing) 1f else 0.6f),
+                range = if (s.trimStart > 0f || s.trimEnd < 1f) s.trimStart..s.trimEnd else null,
                 progress = if (playing) (Player.progress[s.id] ?: 0f) else -1f,
             )
         }

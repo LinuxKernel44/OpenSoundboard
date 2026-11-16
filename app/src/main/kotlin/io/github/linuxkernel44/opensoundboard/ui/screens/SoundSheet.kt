@@ -5,7 +5,10 @@ import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -183,18 +187,30 @@ private fun TrimEditor(s: SoundItem) {
     val p = LocalAurora.current
     var a by remember(s.id) { mutableFloatStateOf(s.trimStart) }
     var b by remember(s.id) { mutableFloatStateOf(s.trimEnd) }
-    var dragging by remember { mutableStateOf(0) }
+    // The shortest allowed trim is 50 ms, whatever the length of the sound.
+    val minGap = if (s.info.durationMs > 0) (50f / s.info.durationMs).coerceIn(0.0005f, 0.5f) else 0.01f
+    val density = LocalDensity.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
-            Modifier.fillMaxWidth().height(96.dp).pointerInput(s.id) {
-                // Horizontal only, so scrolling the sheet vertically over the waveform never edits the trim.
-                detectHorizontalDragGestures(
-                    onDragStart = { o -> dragging = if (kotlin.math.abs(o.x / size.width - a) <= kotlin.math.abs(o.x / size.width - b)) 1 else 2 },
-                    onDragEnd = { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) } },
-                    onDragCancel = { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) } },
-                ) { change, _ ->
-                    val x = (change.position.x / size.width).coerceIn(0f, 1f)
-                    if (dragging == 1) a = x.coerceAtMost(b - 0.01f) else b = x.coerceAtLeast(a + 0.01f)
+            // The handles sit near the screen edges: keep the system back gesture from stealing those drags.
+            Modifier.fillMaxWidth().height(96.dp).systemGestureExclusion().pointerInput(s.id, minGap) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val w = size.width.toFloat().coerceAtLeast(1f)
+                    // The handle is chosen at touch-down (the closest one; the start wins a tie at the far left, the end at the far right),
+                    // and keeps its offset from the finger so it never jumps.
+                    val x0 = down.position.x / w
+                    val grabStart = if (a >= b - minGap) x0 < a else kotlin.math.abs(x0 - a) <= kotlin.math.abs(x0 - b)
+                    val grabOffset = (if (grabStart) a else b) - x0
+                    // Only a horizontal drag edits the trim; a vertical swipe scrolls the sheet.
+                    val first = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } ?: return@awaitEachGesture
+                    fun apply(px: Float) {
+                        val x = (px / w + grabOffset).coerceIn(0f, 1f)
+                        if (grabStart) a = x.coerceAtMost(b - minGap).coerceAtLeast(0f) else b = x.coerceAtLeast(a + minGap).coerceAtMost(1f)
+                    }
+                    apply(first.position.x)
+                    horizontalDrag(first.id) { change -> apply(change.position.x); change.consume() }
+                    Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) }
                 }
             },
         ) {
@@ -205,7 +221,12 @@ private fun TrimEditor(s: SoundItem) {
                 drawRect(p.accent.copy(0.18f), Offset(x0, 0f), androidx.compose.ui.geometry.Size(x1 - x0, size.height))
                 drawRect(p.scrim, Offset(0f, 0f), androidx.compose.ui.geometry.Size(x0, size.height))
                 drawRect(p.scrim, Offset(x1, 0f), androidx.compose.ui.geometry.Size(size.width - x1, size.height))
-                for (x in listOf(x0, x1)) drawLine(p.accent, Offset(x, 6f), Offset(x, size.height - 6f), 6f, androidx.compose.ui.graphics.StrokeCap.Round)
+                val knob = with(density) { 7.dp.toPx() }
+                for (x in listOf(x0, x1)) {
+                    drawLine(p.accent, Offset(x, 6f), Offset(x, size.height - 6f), 5f, androidx.compose.ui.graphics.StrokeCap.Round)
+                    drawCircle(p.accent, knob, Offset(x, size.height / 2f))
+                    drawCircle(p.onAccent, knob * 0.38f, Offset(x, size.height / 2f))
+                }
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -216,7 +237,7 @@ private fun TrimEditor(s: SoundItem) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassAction(LocalBackdrop.current, { Player.preview(s, a, b) }, icon = Ico.Play, label = stringResource(R.string.play))
-            GlassAction(LocalBackdrop.current, { a = 0f; b = 1f; Library.update(s.id) { it.copy(trimStart = 0f, trimEnd = 1f) } }, icon = Ico.Close, label = "0–100%")
+            GlassAction(LocalBackdrop.current, { a = 0f; b = 1f; Library.update(s.id) { it.copy(trimStart = 0f, trimEnd = 1f) } }, icon = Ico.Close, label = stringResource(R.string.trim_reset))
         }
     }
 }

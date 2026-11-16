@@ -160,4 +160,5 @@
     <string name="err_signature">The download is not signed with the same key as this app and was deleted.</string>
     <string name="err_storage">Not enough storage space for the update.</string>
     <string name="err_install">The installation failed.</string>
+    <string name="trim_reset">Reset trim</string>
 </resources>

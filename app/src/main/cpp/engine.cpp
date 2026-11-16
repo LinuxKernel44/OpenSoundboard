@@ -45,6 +45,7 @@ struct Voice {
     int64_t start = 0, end = 0;
     float gain = 1.f;
     int fadeIn = 0;      // frames of remaining fade-in
+    int fadeInLen = 64;  // length of the start fade (longer when the sound starts mid-waveform)
     int releasing = 0;   // >0: frames of fade-out remaining
     int releaseLen = 1;
 };
@@ -206,8 +207,10 @@ private:
             else if (c.type == kStop) release(c.id);
             else if (c.type == kStopAll) { for (auto& v : voices_) if (v.active) beginRelease(v); }
             else if (c.type == kSeek) {
-                for (auto& v : voices_) if (v.active && v.id == c.id && !v.releasing)
-                    v.pos = (double)std::max(v.start, std::min(c.start, v.end - 1));
+                // A target before the trim start goes to the start; a target past the trim end is ignored,
+                // so scrubbing beyond the trimmed range never cuts the sound short.
+                for (auto& v : voices_) if (v.active && v.id == c.id && !v.releasing && c.start < v.end)
+                    v.pos = (double)std::max(v.start, c.start);
             }
             r++;
         }
@@ -225,7 +228,9 @@ private:
         slot->end = std::max(slot->start + 1, std::min(c.end, frames));
         slot->pos = (double)slot->start;
         slot->step = (double)c.snd->sampleRate / (double)std::max(1, rate_.load());
-        slot->gain = c.gain; slot->fadeIn = 64; slot->releasing = 0;
+        // A trimmed start lands mid-waveform, so it gets a slightly longer fade-in to avoid a click.
+        slot->fadeInLen = slot->start > 0 ? 160 : 64;
+        slot->gain = c.gain; slot->fadeIn = slot->fadeInLen; slot->releasing = 0;
         playing_[c.id].fetch_add(1);
     }
     void finish(Voice& v) { if (v.active) { v.active = false; playing_[v.id].fetch_sub(1); } }
@@ -243,6 +248,12 @@ private:
         // Recomputed every block so loops keep their exact pitch and length if the stream is reopened at another rate.
         v.step = (double)s->sampleRate / (double)std::max(1, rate_.load());
         const bool unity = std::fabs(v.step - 1.0) < 1e-9;
+        const int64_t total = s->frames();
+        // Interpolation neighbours: loops wrap inside the loop range, everything else may read real audio outside the trim.
+        const int64_t lo = loop ? v.start : 0, hi = loop ? v.end : total;
+        // A one-shot cut short by the trim end fades out over its last frames instead of ending with a click.
+        const bool cutEnd = !loop && v.end < total;
+        constexpr double kTail = 256.0;
         for (int i = 0; i < n; i++) {
             if (v.pos >= (double)v.end) {
                 if (loop) v.pos -= (double)(v.end - v.start); else { finish(v); return; }
@@ -257,13 +268,14 @@ private:
                 float l[4], r[4];
                 for (int k = 0; k < 4; k++) {
                     int64_t idx = i0 - 1 + k;
-                    l[k] = sampleAt(s, idx, 0, v.start, v.end, loop);
-                    r[k] = chans > 1 ? sampleAt(s, idx, 1, v.start, v.end, loop) : l[k];
+                    l[k] = sampleAt(s, idx, 0, lo, hi, loop);
+                    r[k] = chans > 1 ? sampleAt(s, idx, 1, lo, hi, loop) : l[k];
                 }
                 L = cubic(l, t); R = cubic(r, t);
             }
             float g = v.gain;
-            if (v.fadeIn > 0) { g *= 1.f - (float)v.fadeIn / 64.f; v.fadeIn--; }
+            if (v.fadeIn > 0) { g *= 1.f - (float)v.fadeIn / (float)v.fadeInLen; v.fadeIn--; }
+            if (cutEnd) { double rem = (double)v.end - v.pos; if (rem < kTail) g *= (float)(rem / kTail); }
             if (v.releasing > 0) {
                 g *= (float)v.releasing / (float)v.releaseLen;
                 if (--v.releasing == 0) { finish(v); return; }

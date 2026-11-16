@@ -160,4 +160,5 @@
     <string name="err_signature">Le téléchargement n\'est pas signé avec la même clé que cette app et a été supprimé.</string>
     <string name="err_storage">Espace de stockage insuffisant pour la mise à jour.</string>
     <string name="err_install">L\'installation a échoué.</string>
+    <string name="trim_reset">Réinitialiser la découpe</string>
 </resources>
