@@ -75,7 +75,60 @@ public:
     void put(int id, Sound* s) {
         if (id < 0 || id >= kMaxSounds) { delete s; return; }
         Sound* old = sounds_[id].exchange(s);
+        Sound* orig = orig_[id].exchange(nullptr);   // a reloaded or removed sound drops its edit
         if (old) { Cmd c; c.type = kStop; c.id = id; post(c); retire(old); }
+        if (orig) retire(orig);
+    }
+    // ---- editing: the playing version of a sound is rendered from the untouched original ----
+    // segs = [start0, end0, start1, end1, ...] as fractions of the original, kept in order and joined with a short
+    // equal-power crossfade so cuts do not click. An empty list or the whole file restores the original.
+    bool setEdit(int id, const float* segs, int count) {
+        if (id < 0 || id >= kMaxSounds) return false;
+        Sound* origNow = orig_[id].load();
+        Sound* base = origNow ? origNow : sounds_[id].load();
+        if (!base) return false;
+        bool whole = count < 2 || (count == 2 && segs[0] <= 0.f && segs[1] >= 1.f);
+        if (whole) { resetEdit(id); return true; }
+        const int ch = base->channels;
+        const int64_t n = base->frames();
+        const int64_t xfade = std::max<int64_t>(1, (int64_t)base->sampleRate * 5 / 1000);
+        auto* out = new Sound();
+        out->channels = ch; out->sampleRate = base->sampleRate; out->bitDepth = base->bitDepth; out->codec = base->codec;
+        out->trimDelay = base->trimDelay; out->trimPadding = base->trimPadding;
+        for (int k = 0; k + 1 < count; k += 2) {
+            int64_t i0 = std::max<int64_t>(0, std::min<int64_t>(n, (int64_t)std::llround((double)segs[k] * (double)n)));
+            int64_t i1 = std::max<int64_t>(0, std::min<int64_t>(n, (int64_t)std::llround((double)segs[k + 1] * (double)n)));
+            if (i1 <= i0) continue;
+            int64_t len = i1 - i0;
+            int64_t have = out->frames();
+            int64_t x = (have == 0) ? 0 : std::min<int64_t>(xfade, std::min(len, have) / 2);
+            size_t from = (size_t)i0 * ch;
+            if (x > 0) {
+                size_t tail = (size_t)(have - x) * ch;
+                for (int64_t f = 0; f < x; f++) {
+                    float th = (float)(f + 1) / (float)(x + 1) * 1.5707963f;
+                    float gOut = std::cos(th), gIn = std::sin(th);
+                    for (int c = 0; c < ch; c++)
+                        out->data[tail + (size_t)f * ch + c] = out->data[tail + (size_t)f * ch + c] * gOut + base->data[from + (size_t)f * ch + c] * gIn;
+                }
+                from += (size_t)x * ch;
+            }
+            out->data.insert(out->data.end(), base->data.begin() + from, base->data.begin() + (size_t)i1 * ch);
+        }
+        if (out->data.empty()) { delete out; return false; }
+        if (!origNow) orig_[id].store(base);          // keep the original aside (it stays alive until unload)
+        Sound* old = sounds_[id].exchange(out);
+        { Cmd c; c.type = kStop; c.id = id; post(c); }
+        if (origNow && old) retire(old);              // the previous edited version
+        return true;
+    }
+    void resetEdit(int id) {
+        if (id < 0 || id >= kMaxSounds) return;
+        Sound* base = orig_[id].exchange(nullptr);
+        if (!base) return;
+        Sound* old = sounds_[id].exchange(base);
+        { Cmd c; c.type = kStop; c.id = id; post(c); }
+        if (old) retire(old);
     }
     void remove(int id) { put(id, nullptr); }
     void retire(Sound* s) {  // freed later so the audio thread can never touch freed memory
@@ -321,6 +374,7 @@ private:
     std::atomic<bool> closing_{false};
     std::atomic<int> rate_{48000};
     std::atomic<Sound*> sounds_[kMaxSounds] = {};
+    std::atomic<Sound*> orig_[kMaxSounds] = {};   // untouched original while an edited version is playing
     std::atomic<int> playing_[kMaxSounds] = {};
     std::atomic<float> progress_[kMaxSounds] = {};
     std::vector<std::pair<Sound*, std::chrono::steady_clock::time_point>> grave_;
@@ -426,6 +480,16 @@ JNIEXPORT jboolean JNICALL FN(exportWav)(JNIEnv* env, jobject, jint id, jfloat a
     if (!buf.empty()) ok = fwrite(buf.data(), 1, buf.size(), f) == buf.size() && ok;
     fclose(f);
     return ok ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jboolean JNICALL FN(setEdit)(JNIEnv* env, jobject, jint id, jfloatArray segs) {
+    jsize n = segs ? env->GetArrayLength(segs) : 0;
+    std::vector<float> v((size_t)n);
+    if (n > 0) env->GetFloatArrayRegion(segs, 0, n, v.data());
+    return E().setEdit(id, v.data(), (int)n) ? JNI_TRUE : JNI_FALSE;
+}
+JNIEXPORT jlong JNICALL FN(durationMs)(JNIEnv*, jobject, jint id) {
+    Sound* s = E().get(id);
+    return s ? (jlong)(s->frames() * 1000 / std::max(1, s->sampleRate)) : 0;
 }
 JNIEXPORT jfloat JNICALL FN(peakLevel)(JNIEnv*, jobject, jint id, jfloat a, jfloat b) {
     Sound* s = E().get(id);

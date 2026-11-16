@@ -34,11 +34,29 @@ object Library {
     fun loadAllIntoEngine() {
         var changed = false
         val updated = data.sounds.map { s ->
-            val info = SoundLoader.load(s.id, soundFile(s))
+            val info = loadSound(s)
             if (info != null) WaveformCache.ensure(s)
             if (info != null && info != s.info) { changed = true; s.copy(info = info) } else s
         }
         if (changed) { data = data.copy(sounds = updated); save() }
+    }
+
+    /** Decodes a sound into the engine and renders its edited version when parts were cut. */
+    private fun loadSound(s: SoundItem): SourceInfo? {
+        val info = SoundLoader.load(s.id, soundFile(s))
+        if (info != null && !s.segments.isWhole()) NativeEngine.setEdit(s.id, s.segments.toFlat())
+        return info
+    }
+
+    /**
+     * Sets which parts of a sound are kept (trim or removed sections). The engine renders the edited version first,
+     * then the library and the waveform cache follow, so everything shows the edited sound at once. Call off the main thread.
+     */
+    fun setSegments(id: Int, segments: List<Seg>) {
+        val s = data.sounds.firstOrNull { it.id == id } ?: return
+        NativeEngine.setEdit(id, if (segments.isWhole()) FloatArray(0) else segments.toFlat())
+        WaveformCache.ensure(s.copy(segments = segments))
+        update(id) { it.copy(segments = segments) }
     }
 
     private fun save() {
@@ -138,6 +156,7 @@ object Library {
             val info = SoundLoader.load(id, file)
             if (info == null) { file.delete(); return@forEach }
             val item = s.copy(id = id, file = file.name, categoryId = s.categoryId?.let { catMap[it] }, info = info)
+            if (!item.segments.isWhole()) NativeEngine.setEdit(id, item.segments.toFlat())
             WaveformCache.ensure(item)
             mutate { d -> d.copy(sounds = d.sounds + item) }
             added++

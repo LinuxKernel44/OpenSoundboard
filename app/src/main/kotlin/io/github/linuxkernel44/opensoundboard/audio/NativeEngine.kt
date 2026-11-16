@@ -24,6 +24,13 @@ object NativeEngine {
     /** Largest absolute sample (linear, 1.0 = full scale) of sound [id] between two fractions of the file. */
     /** Writes the sound between two fractions of the file, multiplied by [gain], as a 24-bit WAV. */
     external fun exportWav(id: Int, startFraction: Float, endFraction: Float, gain: Float, path: String): Boolean
+    /**
+     * Renders the playing version of sound [id] from the untouched original: [segments] is [start0, end0, start1, end1, ...]
+     * as fractions of the original, joined by a 5 ms crossfade. An empty array or the whole file restores the original.
+     */
+    external fun setEdit(id: Int, segments: FloatArray): Boolean
+    /** Length of the playing (edited) version of sound [id]. */
+    external fun durationMs(id: Int): Long
     external fun peakLevel(id: Int, startFraction: Float, endFraction: Float): Float
     external fun isPlaying(id: Int): Boolean
     external fun setMasterGain(gain: Float)

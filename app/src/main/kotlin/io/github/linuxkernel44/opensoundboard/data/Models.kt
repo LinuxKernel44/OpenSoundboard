@@ -26,13 +26,12 @@ data class SoundItem(
     val mode: PlayMode = PlayMode.ONE_SHOT,
     val volume: Float = 1f,
     val gainDb: Float = 0f,          // extra gain in dB, applied on top of the volume (-24..+24)
-    val trimStart: Float = 0f,
-    val trimEnd: Float = 1f,
+    val segments: List<Seg> = WHOLE_SOUND,   // the parts of the file that are kept, in order (a trim or removed sections)
     val info: SourceInfo = SourceInfo(),
 )
 
 /** True when the sound plays differently from its file: trimmed, or a volume or gain change. */
-fun SoundItem.isEdited(): Boolean = trimStart > 0f || trimEnd < 1f || gainDb != 0f || volume != 1f
+fun SoundItem.isEdited(): Boolean = !segments.isWhole() || gainDb != 0f || volume != 1f
 
 /** Linear gain sent to the engine: the volume fader times the gain in dB. */
 fun SoundItem.linearGain(): Float = volume * Math.pow(10.0, gainDb / 20.0).toFloat()
@@ -55,7 +54,7 @@ internal fun LibraryData.toJson(): JSONObject = JSONObject().apply {
                 put("id", s.id); put("file", s.file); put("name", s.name)
                 put("category", s.categoryId ?: JSONObject.NULL)
                 put("favorite", s.favorite); put("mode", s.mode.name)
-                put("volume", s.volume.toDouble()); put("gainDb", s.gainDb.toDouble()); put("trimStart", s.trimStart.toDouble()); put("trimEnd", s.trimEnd.toDouble())
+                put("volume", s.volume.toDouble()); put("gainDb", s.gainDb.toDouble()); put("segments", JSONArray().also { a -> s.segments.forEach { g -> a.put(JSONArray().put(g.start.toDouble()).put(g.end.toDouble())) } })
                 put("info", JSONObject().apply {
                     put("codec", s.info.codec); put("sampleRate", s.info.sampleRate); put("channels", s.info.channels)
                     put("bitDepth", s.info.bitDepth); put("bitrate", s.info.bitrateKbps)
@@ -80,7 +79,10 @@ internal fun libraryFromJson(o: JSONObject): LibraryData {
                 mode = runCatching { PlayMode.valueOf(s.optString("mode", "ONE_SHOT")) }.getOrDefault(PlayMode.ONE_SHOT),
                 volume = s.optDouble("volume", 1.0).toFloat(),
                 gainDb = s.optDouble("gainDb", 0.0).toFloat(),
-                trimStart = s.optDouble("trimStart", 0.0).toFloat(), trimEnd = s.optDouble("trimEnd", 1.0).toFloat(),
+                // Older libraries stored a single trim range; it becomes one kept segment.
+                segments = s.optJSONArray("segments")?.let { a -> (0 until a.length()).map { k -> a.getJSONArray(k).let { g -> Seg(g.getDouble(0).toFloat(), g.getDouble(1).toFloat()) } } }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?: s.optDouble("trimStart", 0.0).toFloat().let { a0 -> s.optDouble("trimEnd", 1.0).toFloat().let { b0 -> if (a0 <= 0f && b0 >= 1f) WHOLE_SOUND else listOf(Seg(a0, b0)) } },
                 info = SourceInfo(i.optString("codec"), i.optInt("sampleRate"), i.optInt("channels"), i.optInt("bitDepth"),
                     i.optInt("bitrate"), i.optLong("durationMs"), i.optLong("size"), i.optInt("gDelay"), i.optInt("gPadding")),
             )

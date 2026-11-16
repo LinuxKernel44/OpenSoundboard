@@ -20,7 +20,7 @@ object WaveformCache {
 
     fun init(ctx: Context) { dir = File(ctx.cacheDir, "waveforms").apply { mkdirs() } }
 
-    private fun keyOf(s: SoundItem) = (s.file + "|" + Settings.gapless).hashCode()
+    private fun keyOf(s: SoundItem) = (s.file + "|" + Settings.gapless + "|" + s.segments.hashCode()).hashCode()
     private fun fileOf(id: Int) = File(dir, "$id.wf")
 
     /** Reads cached waveforms from disk (call off the main thread, before decoding). */

@@ -88,17 +88,17 @@ object Player {
         val single = Settings.singleSound
         when (s.mode) {
             PlayMode.ONE_SHOT -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id)
-                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 0, s.linearGain(), s.trimStart, s.trimEnd) }
+                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 0, s.linearGain(), 0f, 1f) }
             PlayMode.LOOP -> if (NativeEngine.isPlaying(s.id)) NativeEngine.stopSound(s.id)
-                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 1, s.linearGain(), s.trimStart, s.trimEnd) }
-            PlayMode.HOLD -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 2, s.linearGain(), s.trimStart, s.trimEnd) }
+                else { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 1, s.linearGain(), 0f, 1f) }
+            PlayMode.HOLD -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 2, s.linearGain(), 0f, 1f) }
         }
     }
     /** Touch on a pad's waveform: starts the sound if needed, then jumps to [fraction] of the file. */
     fun scrubStart(s: SoundItem, fraction: Float, wasPlaying: Boolean) {
         if (!wasPlaying) {
             if (Settings.singleSound) NativeEngine.stopAll()
-            NativeEngine.play(s.id, if (s.mode == PlayMode.LOOP) 1 else 0, s.linearGain(), s.trimStart, s.trimEnd)
+            NativeEngine.play(s.id, if (s.mode == PlayMode.LOOP) 1 else 0, s.linearGain(), 0f, 1f)
         }
         NativeEngine.seek(s.id, fraction)
     }
@@ -106,7 +106,7 @@ object Player {
     fun releaseLater(s: SoundItem, ms: Long) { main.postDelayed({ release(s) }, ms) }
     fun release(s: SoundItem) { if (s.mode == PlayMode.HOLD) NativeEngine.stopSound(s.id) }
     fun stopAll() = NativeEngine.stopAll()
-    fun preview(s: SoundItem, start: Float = s.trimStart, end: Float = s.trimEnd) { if (Settings.singleSound) NativeEngine.stopAll() else NativeEngine.stopSound(s.id); NativeEngine.play(s.id, 0, s.linearGain(), start, end) }
+    fun preview(s: SoundItem, start: Float = 0f, end: Float = 1f) { if (Settings.singleSound) NativeEngine.stopAll() else NativeEngine.stopSound(s.id); NativeEngine.play(s.id, 0, s.linearGain(), start, end) }
 
     /** Syncs the list of currently sounding ids (call from a UI polling loop). */
     fun pollPlaying(ids: List<Int>) {

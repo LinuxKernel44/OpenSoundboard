@@ -167,12 +167,16 @@
     <string name="gain_clip">Crête après gain : %1$s dBFS. Risque de distorsion.</string>
     <string name="gain_reset">0 dB</string>
     <string name="gain_normalize">Normaliser à -1 dBFS</string>
-    <string name="share_edited_body">Ce son a été découpé, ou son volume ou son gain a été modifié. Quelle version voulez-vous partager ?</string>
+    <string name="share_edited_body">Ce son a été modifié : découpé ou coupé, ou son volume ou son gain a changé. Quelle version voulez-vous partager ?</string>
     <string name="share_edited">Version modifiée (WAV)</string>
     <string name="share_original">Fichier d\'origine</string>
     <string name="share_failed">Impossible de préparer la version modifiée.</string>
     <string name="trim_apply">Appliquer la découpe</string>
     <string name="trim_pending">Pas encore appliquée. Touchez Appliquer la découpe pour l\'utiliser.</string>
-    <string name="trim_applied">Découpe appliquée</string>
-    <string name="info_trimmed">Durée découpée</string>
+    <string name="trim_applied">Terminé</string>
+    <string name="info_trimmed">Durée après modifications</string>
+    <string name="stop">Stop</string>
+    <string name="trim_keep">Garder la sélection</string>
+    <string name="trim_remove">Supprimer la sélection</string>
+    <string name="trim_hint">Glissez les poignées pour sélectionner une partie, puis gardez-la ou supprimez-la.</string>
 </resources>

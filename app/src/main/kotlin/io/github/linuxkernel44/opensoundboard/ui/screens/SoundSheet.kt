@@ -27,6 +27,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import io.github.linuxkernel44.opensoundboard.data.remove
+import io.github.linuxkernel44.opensoundboard.data.keep
+import io.github.linuxkernel44.opensoundboard.data.isWhole
+import io.github.linuxkernel44.opensoundboard.data.WHOLE_SOUND
+import io.github.linuxkernel44.opensoundboard.data.Seg
 import io.github.linuxkernel44.opensoundboard.ui.SeekWaveform
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.Job
@@ -112,7 +117,7 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
     val toast = LocalToast.current
     val renderFailed = stringResource(R.string.share_failed)
     // Loudest sample of the trimmed range, measured once off the main thread (linear, 1.0 = full scale).
-    val peak by produceState(0f, id, s.trimStart, s.trimEnd, s.info) { value = withContext(Dispatchers.Default) { NativeEngine.peakLevel(id, s.trimStart, s.trimEnd) } }
+    val peak by produceState(0f, id, s.segments, s.info) { value = withContext(Dispatchers.Default) { NativeEngine.peakLevel(id, 0f, 1f) } }
 
     DisposableEffect(id) { onDispose { if (name.isNotBlank()) Library.update(id) { it.copy(name = name.trim()) } } }
     // gainDb is the raw slider value; the rounded value (with a small detent at 0 dB) is what is shown and saved.
@@ -156,7 +161,12 @@ fun SoundSheet(id: Int, onClose: () -> Unit) {
                 }
                 SeekWaveform(s, 64, Modifier.fillMaxWidth().height(56.dp), hPad = 0.dp, vPad = 6.dp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassAction(backdrop, { Player.preview(s) }, icon = Ico.Play, label = stringResource(R.string.play))
+                    // Play turns into Stop while this sound is sounding.
+                    val sounding = Player.playing.contains(id)
+                    GlassAction(
+                        backdrop, { if (sounding) NativeEngine.stopSound(id) else Player.preview(s) },
+                        icon = if (sounding) Ico.Stop else Ico.Play, label = stringResource(if (sounding) R.string.stop else R.string.play),
+                    )
                     GlassAction(backdrop, { Library.update(id) { it.copy(favorite = !it.favorite) } }, icon = if (s.favorite) Ico.HeartFilled else Ico.Heart, label = stringResource(R.string.tab_favorites), accent = s.favorite)
                     GlassAction(backdrop, { if (s.isEdited()) shareDialog = true else shareOriginal(ctx, s) }, icon = Ico.Share, label = stringResource(R.string.share))
                     GlassAction(
@@ -255,7 +265,7 @@ private fun InfoTable(s: SoundItem) {
             KeyValue(stringResource(R.string.info_channels), when (i.channels) { 1 -> stringResource(R.string.mono); 2 -> stringResource(R.string.stereo); else -> stringResource(R.string.channels_n, i.channels) })
             KeyValue(stringResource(R.string.info_bitrate), "${i.bitrateKbps} kb/s")
             KeyValue(stringResource(R.string.info_duration), fmtDuration(i.durationMs))
-            if (s.trimStart > 0f || s.trimEnd < 1f) KeyValue(stringResource(R.string.info_trimmed), fmtDuration(((s.trimEnd - s.trimStart) * i.durationMs).toLong()))
+            if (!s.segments.isWhole()) KeyValue(stringResource(R.string.info_trimmed), fmtDuration(NativeEngine.durationMs(s.id)))
             KeyValue(stringResource(R.string.info_size), fmtSize(i.sizeBytes))
             if (i.gaplessDelay > 0 || i.gaplessPadding > 0) KeyValue(stringResource(R.string.info_gapless), stringResource(R.string.gapless_trimmed, i.gaplessDelay, i.gaplessPadding))
         }
@@ -263,20 +273,30 @@ private fun InfoTable(s: SoundItem) {
 }
 
 /**
- * Waveform with two draggable handles. Moving them only changes a draft: the sound keeps playing and showing as before until
- * you tap Apply trim. Reset trim goes back to the whole sound. The file itself is never modified.
+ * Select a part of the sound with the two handles, then keep it or remove it. The sound is rendered again with the cut,
+ * so pads, seek bars and lengths all show the edited sound, and the file itself is never modified. Reset trim goes back
+ * to the whole sound.
  */
 @Composable
 private fun TrimEditor(s: SoundItem) {
     val p = LocalAurora.current
     val toast = LocalToast.current
-    var a by remember(s.id) { mutableFloatStateOf(s.trimStart) }
-    var b by remember(s.id) { mutableFloatStateOf(s.trimEnd) }
-    val dirty = kotlin.math.abs(a - s.trimStart) > 1e-4f || kotlin.math.abs(b - s.trimEnd) > 1e-4f
-    // The shortest allowed trim is 50 ms, whatever the length of the sound.
-    val minGap = if (s.info.durationMs > 0) (50f / s.info.durationMs).coerceIn(0.0005f, 0.5f) else 0.01f
+    val scope = rememberCoroutineScope()
+    // The editor always works on the sound as it plays now (already edited), from its start to its end.
+    var a by remember(s.segments) { mutableFloatStateOf(0f) }
+    var b by remember(s.segments) { mutableFloatStateOf(1f) }
+    val editedMs = remember(s.segments, s.info) { NativeEngine.durationMs(s.id) }
+    // The shortest part allowed is 50 ms, whatever the length of the sound.
+    val minGap = if (editedMs > 0) (50f / editedMs).coerceIn(0.0005f, 0.5f) else 0.01f
+    val selected = b - a
+    val canKeep = selected < 0.999f && selected * editedMs >= 50f
+    val canRemove = selected > 0.001f && (1f - selected) * editedMs >= 50f
+    val sounding = Player.playing.contains(s.id)
     val density = LocalDensity.current
-    val applied = stringResource(R.string.trim_applied)
+    val done = stringResource(R.string.trim_applied)
+    fun edit(newSegments: List<Seg>) {
+        scope.launch { withContext(Dispatchers.IO) { Library.setSegments(s.id, newSegments) }; toast(done) }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             // The handles sit near the screen edges: keep the system back gesture from stealing those drags.
@@ -289,7 +309,7 @@ private fun TrimEditor(s: SoundItem) {
                     val x0 = down.position.x / w
                     val grabStart = if (a >= b - minGap) x0 < a else kotlin.math.abs(x0 - a) <= kotlin.math.abs(x0 - b)
                     val grabOffset = (if (grabStart) a else b) - x0
-                    // Only a horizontal drag edits the trim; a vertical swipe scrolls the sheet.
+                    // Only a horizontal drag moves a handle; a vertical swipe scrolls the sheet.
                     val first = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } ?: return@awaitEachGesture
                     fun apply(px: Float) {
                         val x = (px / w + grabOffset).coerceIn(0f, 1f)
@@ -301,7 +321,7 @@ private fun TrimEditor(s: SoundItem) {
             },
         ) {
             GlassPanel(LocalBackdrop.current, Modifier.fillMaxSize(), radius = 18.dp) {}
-            Waveform(s.id, 96, Modifier.fillMaxSize().padding(10.dp), p.text.copy(0.35f))
+            Waveform(s.id, 96, Modifier.fillMaxSize().padding(10.dp), p.text.copy(0.35f), scale = s.linearGain())
             Canvas(Modifier.fillMaxSize()) {
                 val x0 = a * size.width; val x1 = b * size.width
                 drawRect(p.accent.copy(0.18f), Offset(x0, 0f), androidx.compose.ui.geometry.Size(x1 - x0, size.height))
@@ -316,19 +336,19 @@ private fun TrimEditor(s: SoundItem) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val dur = s.info.durationMs
-            AText(fmtDuration((a * dur).toLong()), size = 12.sp, mono = true, color = p.muted)
-            AText(fmtDuration(((b - a) * dur).toLong()), size = 12.sp, mono = true, weight = FontWeight.Medium)
-            AText(fmtDuration((b * dur).toLong()), size = 12.sp, mono = true, color = p.muted)
+            AText(fmtDuration((a * editedMs).toLong()), size = 12.sp, mono = true, color = p.muted)
+            AText(fmtDuration((selected * editedMs).toLong()), size = 12.sp, mono = true, weight = FontWeight.Medium)
+            AText(fmtDuration((b * editedMs).toLong()), size = 12.sp, mono = true, color = p.muted)
         }
-        if (dirty) AText(stringResource(R.string.trim_pending), size = 12.sp, color = p.accent, weight = FontWeight.Medium)
+        AText(stringResource(R.string.trim_hint), size = 12.sp, color = p.muted)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassAction(LocalBackdrop.current, { Player.preview(s, a, b) }, icon = Ico.Play, label = stringResource(R.string.play))
             GlassAction(
-                LocalBackdrop.current, { if (dirty) { Library.update(s.id) { it.copy(trimStart = a, trimEnd = b) }; toast(applied) } },
-                icon = Ico.Check, label = stringResource(R.string.trim_apply), accent = dirty,
+                LocalBackdrop.current, { if (sounding) NativeEngine.stopSound(s.id) else Player.preview(s, a, b) },
+                icon = if (sounding) Ico.Stop else Ico.Play, label = stringResource(if (sounding) R.string.stop else R.string.play),
             )
-            GlassAction(LocalBackdrop.current, { a = 0f; b = 1f; Library.update(s.id) { it.copy(trimStart = 0f, trimEnd = 1f) } }, icon = Ico.Close, label = stringResource(R.string.trim_reset))
+            GlassAction(LocalBackdrop.current, { if (canKeep) edit(s.segments.keep(a, b)) }, icon = Ico.Check, label = stringResource(R.string.trim_keep), accent = canKeep)
+            GlassAction(LocalBackdrop.current, { if (canRemove) edit(s.segments.remove(a, b)) }, icon = Ico.Trash, label = stringResource(R.string.trim_remove))
+            GlassAction(LocalBackdrop.current, { if (!s.segments.isWhole()) edit(WHOLE_SOUND) }, icon = Ico.Close, label = stringResource(R.string.trim_reset))
         }
     }
 }
@@ -348,7 +368,7 @@ private fun shareOriginal(ctx: Context, s: SoundItem) {
 /** Renders the sound as it plays in the app (trim, volume and gain applied) to a 24-bit WAV, or null on failure. */
 private fun renderEdited(ctx: Context, s: SoundItem): File? {
     val out = File(shareDir(ctx), "${safeName(s)} (edited).wav")
-    return if (NativeEngine.exportWav(s.id, s.trimStart, s.trimEnd, s.linearGain(), out.absolutePath)) out else { out.delete(); null }
+    return if (NativeEngine.exportWav(s.id, 0f, 1f, s.linearGain(), out.absolutePath)) out else { out.delete(); null }
 }
 
 private fun sendFile(ctx: Context, file: File) {
