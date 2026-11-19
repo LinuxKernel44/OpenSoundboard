@@ -134,7 +134,7 @@ object TokenStore {
             if (s.global) all else all.filter { hostMatches(host, domainOf(it)) }
         }
         if (lines.isEmpty()) return null
-        return File.createTempFile("c", ".txt", cache).also {
+        return File.createTempFile("cookies", ".txt", cache).also {
             it.setReadable(false, false); it.setReadable(true, true); it.setWritable(true, true)
             it.writeText("# Netscape HTTP Cookie File\n" + lines.joinToString("\n") + "\n")
         }

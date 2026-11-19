@@ -99,7 +99,11 @@ fun LinkDownloadsSection() {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openInputStream(uri)!!.use { String(it.readBytes()) } }.getOrNull() }
-            if (text != null) CookieImport.start(text, uri.lastPathSegment?.substringAfterLast('/') ?: "cookies.txt")
+            if (text != null) {
+                // The file's real name (a content URI's last segment is an opaque id like "msf:19").
+                val name = runCatching { ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull()
+                CookieImport.start(text, name ?: "cookies.txt")
+            }
         }
     }
 
