@@ -27,3 +27,7 @@
 -dontwarn com.github.luben.**
 -dontwarn org.brotli.**
 -dontwarn org.objectweb.asm.**
+
+# BotGuard page calls these methods by name from JavaScript
+-keepclassmembers class io.github.linuxkernel44.opensoundboard.download.BotGuard { @android.webkit.JavascriptInterface <methods>; }
+-keepattributes JavascriptInterface

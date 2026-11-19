@@ -37,6 +37,7 @@ object Settings {
     var skippedVersion = ""
     var singleSound by mutableStateOf(true)          // starting a sound cuts the one that is playing
     var background by mutableIntStateOf(0)           // index into Backgrounds
+    var autoPoToken by mutableStateOf(true)          // generate a YouTube PO token on the device when a link needs it
     var spectrumBands = 32
 
     fun init(ctx: Context) {
@@ -61,6 +62,7 @@ object Settings {
         glassSaturation = prefs.getFloat("gSat", DEFAULT_GLASS_SATURATION)
         glassHighlight = prefs.getFloat("gHigh", DEFAULT_GLASS_HIGHLIGHT)
         background = prefs.getInt("bg", 0).coerceIn(0, 4)
+        autoPoToken = prefs.getBoolean("autoPot", true)
     }
 
     fun resetGlass() {
@@ -71,6 +73,6 @@ object Settings {
     fun save() {
         prefs.edit().putInt("outDev", outputDeviceId).putInt("outRate", outputSampleRate).putBoolean("exclusive", exclusive)
             .putFloat("master", masterVolume).putInt("recDev", recordDeviceId).putInt("recRate", recordSampleRate)
-            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putBoolean("gapless", gapless).putBoolean("autoUpd", autoUpdateCheck).putLong("lastUpd", lastUpdateCheck).putString("skipVer", skippedVersion).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).apply()
+            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putBoolean("gapless", gapless).putBoolean("autoUpd", autoUpdateCheck).putLong("lastUpd", lastUpdateCheck).putString("skipVer", skippedVersion).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).putBoolean("autoPot", autoPoToken).apply()
     }
 }

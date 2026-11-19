@@ -140,6 +140,15 @@ object TokenStore {
         }
     }
 
+    /** A `Cookie:` header with the stored cookies that apply to [url] (same selection as [cookieFileFor]). */
+    fun cookieHeaderFor(url: String): String? {
+        val f = cookieFileFor(url) ?: return null
+        return try {
+            f.readLines().filter { it.isNotBlank() && !it.startsWith("# ") }.mapNotNull { l -> l.split('\t').takeIf { it.size == 7 }?.let { "${it[5]}=${it[6]}" } }
+                .joinToString("; ").ifEmpty { null }
+        } finally { f.delete() }
+    }
+
     // ---- YouTube PO token ----
     fun saveYoutube(po: String, visitor: String) {
         poToken = po.trim(); visitorData = visitor.trim()

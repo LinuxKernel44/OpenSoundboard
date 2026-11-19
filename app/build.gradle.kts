@@ -22,8 +22,8 @@ android {
         applicationId = "io.github.linuxkernel44.opensoundboard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "0.12.0"
+        versionCode = 23
+        versionName = "0.12.1"
         // yt-dlp + ffmpeg make each ABI about 55 MB, so only arm64 phones and the x86_64 emulator are built (-PosbAbis=arm64-v8a for a release).
         ndk { abiFilters += ((project.findProperty("osbAbis") as String?) ?: "arm64-v8a,x86_64").split(",") }
         externalNativeBuild {

@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import io.github.linuxkernel44.opensoundboard.R
 import io.github.linuxkernel44.opensoundboard.download.CookieRow
+import io.github.linuxkernel44.opensoundboard.data.Settings
 import io.github.linuxkernel44.opensoundboard.download.LinkDownloader
+import io.github.linuxkernel44.opensoundboard.download.PoTokenAuto
 import io.github.linuxkernel44.opensoundboard.download.TokenException
 import io.github.linuxkernel44.opensoundboard.download.TokenStore
 import io.github.linuxkernel44.opensoundboard.ui.GlassDialog
@@ -88,6 +90,8 @@ fun LinkDownloadsSection() {
     var updating by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf<String?>(null) }
     var rows by remember { mutableStateOf<List<CookieRow>>(emptyList()) }
+    var testing by remember { mutableStateOf(false) }
+    var poStatus by remember { mutableStateOf("") }
     var po by remember { mutableStateOf(TokenStore.poToken) }
     var visitor by remember { mutableStateOf(TokenStore.visitorData) }
     LaunchedEffect(Unit) { version = withContext(Dispatchers.IO) { LinkDownloader.versionLabel(ctx) } }
@@ -147,6 +151,24 @@ fun LinkDownloadsSection() {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AText(stringResource(R.string.tok_po), size = 16.sp, weight = FontWeight.Medium)
                 AText(stringResource(R.string.tok_po_hint), size = 12.sp, color = p.muted)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        AText(stringResource(R.string.tok_po_auto), size = 15.sp)
+                        AText(stringResource(R.string.tok_po_auto_hint), size = 12.sp, color = p.muted)
+                    }
+                    io.github.linuxkernel44.opensoundboard.ui.glass.LiquidToggle({ Settings.autoPoToken }, { Settings.autoPoToken = it; Settings.save() }, backdrop)
+                }
+                GlassAction(backdrop, {
+                    if (!testing) { testing = true; poStatus = ""; scope.launch {
+                        poStatus = withContext(Dispatchers.IO) {
+                            runCatching { PoTokenAuto.init(ctx); PoTokenAuto.generate() }.fold(
+                                { (id, t) -> ctx.getString(R.string.tok_po_ok, t.take(8), (PoTokenAuto.secondsLeft() / 3600).toString()) + if (id.loggedIn) "" else "  (anonymous)" },
+                                { ctx.getString(R.string.tok_po_fail, it.message ?: it.javaClass.simpleName) })
+                        }
+                        testing = false
+                    } }
+                }, Modifier.fillMaxWidth(), icon = Ico.Check, label = stringResource(if (testing) R.string.tok_po_testing else R.string.tok_po_test))
+                if (poStatus.isNotEmpty()) AText(poStatus, size = 12.sp, color = p.muted)
                 GlassField(po, { po = it }, stringResource(R.string.tok_po_field))
                 GlassField(visitor, { visitor = it }, stringResource(R.string.tok_visitor_field))
                 val saved = stringResource(R.string.tok_saved)

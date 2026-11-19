@@ -241,4 +241,10 @@
     <string name="tok_visitor_field">Visitor data (facultatif)</string>
     <string name="tok_saved">Enregistré</string>
     <string name="tok_clear">Effacer</string>
+    <string name="tok_po_auto">Générer automatiquement</string>
+    <string name="tok_po_auto_hint">Crée le token sur cet appareil quand un lien YouTube en a besoin (BotGuard tourne dans une vue web cachée). Un token saisi ci-dessous est prioritaire.</string>
+    <string name="tok_po_test">Générer maintenant</string>
+    <string name="tok_po_testing">Génération…</string>
+    <string name="tok_po_ok">Token généré (%1$s…), valable environ %2$s h</string>
+    <string name="tok_po_fail">Impossible de générer un token : %1$s</string>
 </resources>

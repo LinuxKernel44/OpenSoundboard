@@ -241,4 +241,10 @@
     <string name="tok_visitor_field">Visitor data (optional)</string>
     <string name="tok_saved">Saved</string>
     <string name="tok_clear">Clear</string>
+    <string name="tok_po_auto">Generate automatically</string>
+    <string name="tok_po_auto_hint">Creates the token on this device when a YouTube link needs it (BotGuard runs in a hidden web view). A token you type below takes priority.</string>
+    <string name="tok_po_test">Generate now</string>
+    <string name="tok_po_testing">Generating…</string>
+    <string name="tok_po_ok">Token generated (%1$s…), valid about %2$s h</string>
+    <string name="tok_po_fail">Couldn\'t generate a token: %1$s</string>
 </resources>

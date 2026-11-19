@@ -63,6 +63,8 @@ object LinkDownloader {
                 }
             }
         }, Localization.DEFAULT)
+        PoTokenAuto.init(ctx)
+        org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.setPoTokenProvider(PoTokenAuto)
         ready = true
     }
 
@@ -76,7 +78,8 @@ object LinkDownloader {
     /** Applies the user's cookies and PO token to a yt-dlp request. Returns the temp cookie file to delete afterwards. */
     private fun YoutubeDLRequest.withTokens(url: String): File? {
         addOption("--no-playlist"); addOption("--no-warnings"); addOption("--socket-timeout", 20)
-        TokenStore.youtubeExtractorArgs()?.let { addOption("--extractor-args", it) }
+        // A token the user typed wins; otherwise one is generated on the device for YouTube links.
+        (TokenStore.youtubeExtractorArgs() ?: PoTokenAuto.extractorArgsFor(url))?.let { addOption("--extractor-args", it) }
         return TokenStore.cookieFileFor(url)?.also { addOption("--cookies", it.absolutePath) }
     }
 
