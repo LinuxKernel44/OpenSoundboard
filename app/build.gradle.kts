@@ -22,9 +22,10 @@ android {
         applicationId = "io.github.linuxkernel44.opensoundboard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "0.11.0"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        versionCode = 22
+        versionName = "0.12.0"
+        // yt-dlp + ffmpeg make each ABI about 55 MB, so only arm64 phones and the x86_64 emulator are built (-PosbAbis=arm64-v8a for a release).
+        ndk { abiFilters += ((project.findProperty("osbAbis") as String?) ?: "arm64-v8a,x86_64").split(",") }
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-std=c++17", "-O3", "-fno-exceptions")
@@ -62,6 +63,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -70,7 +72,8 @@ android {
         prefab = true
         buildConfig = true
     }
-    packaging { jniLibs { keepDebugSymbols += "**/*.so" } }
+    // yt-dlp unzips its bundled Python and ffmpeg from the native library folder, so the libraries must be extracted at install.
+    packaging { jniLibs { keepDebugSymbols += "**/*.so"; useLegacyPackaging = true } }
     androidResources { localeFilters += listOf("en", "fr") }
     dependenciesInfo { includeInApk = false; includeInBundle = false }
     lint { abortOnError = false }
@@ -89,4 +92,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("com.google.oboe:oboe:1.10.0")
+    // Link downloads: yt-dlp (bundled Python + ffmpeg) first, NewPipeExtractor as fallback.
+    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.27.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 }

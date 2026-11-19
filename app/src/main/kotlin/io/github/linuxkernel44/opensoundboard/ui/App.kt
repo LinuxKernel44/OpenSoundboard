@@ -35,6 +35,10 @@ import io.github.linuxkernel44.opensoundboard.audio.NativeEngine
 import io.github.linuxkernel44.opensoundboard.audio.Player
 import io.github.linuxkernel44.opensoundboard.data.Library
 import io.github.linuxkernel44.opensoundboard.update.UpdateManager
+import io.github.linuxkernel44.opensoundboard.download.Incoming
+import io.github.linuxkernel44.opensoundboard.ui.screens.LinkFlowOverlay
+import io.github.linuxkernel44.opensoundboard.ui.screens.LinkFlowState
+import io.github.linuxkernel44.opensoundboard.ui.screens.LinkStep
 import io.github.linuxkernel44.opensoundboard.ui.glass.GlassPanel
 import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidBottomTab
 import io.github.linuxkernel44.opensoundboard.ui.glass.LiquidBottomTabs
@@ -61,7 +65,9 @@ fun OpenSoundboardApp() {
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var editing by rememberSaveable { mutableStateOf<Int?>(null) }
     var toastText by remember { mutableStateOf<String?>(null) }
+    val link = remember { LinkFlowState() }
 
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val view = LocalView.current
     SideEffect {
         val w = (view.context as? Activity)?.window ?: return@SideEffect
@@ -82,9 +88,12 @@ fun OpenSoundboardApp() {
             delay(33)
         }
     }
-    BackHandler(enabled = editing != null || tab != 0) { if (editing != null) editing = null else tab = 0 }
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    BackHandler(enabled = link.step == LinkStep.Input || link.step == LinkStep.Preview || link.step == LinkStep.Choose || link.step == LinkStep.Split || editing != null || tab != 0) {
+        if (link.step == LinkStep.Input || link.step == LinkStep.Preview || link.step == LinkStep.Choose || link.step == LinkStep.Split) link.close(ctx)
+        else if (editing != null) editing = null else tab = 0
+    }
     LaunchedEffect(Unit) { delay(2500); UpdateManager.autoCheck(ctx) }
+    LaunchedEffect(Incoming.url) { Incoming.url?.let { link.open(it, category); Incoming.url = null } }
     LaunchedEffect(toastText) { if (toastText != null) { delay(2600); toastText = null } }
 
     CompositionLocalProvider(LocalAurora provides palette, LocalBackdrop provides backdrop, LocalMeters provides meters, LocalToast provides { toastText = it }) {
@@ -94,7 +103,7 @@ fun OpenSoundboardApp() {
             Box(Modifier.fillMaxSize().statusBarsPadding()) {
                 Crossfade(tab, label = "tab") { t ->
                     when (t) {
-                        0 -> SoundsScreen(false, category, { category = it }, { editing = it }, bottomInset + 24.dp, onUpdate = { tab = 4 })
+                        0 -> SoundsScreen(false, category, { category = it }, { editing = it }, bottomInset + 24.dp, onUpdate = { tab = 4 }, onLink = { link.open("", category) })
                         1 -> CategoriesScreen({ category = it; tab = 0 }, bottomInset + 24.dp)
                         2 -> SoundsScreen(true, null, {}, { editing = it }, bottomInset + 24.dp)
                         3 -> RecordScreen(bottomInset + 24.dp)
@@ -119,6 +128,8 @@ fun OpenSoundboardApp() {
                     AText(t, Modifier.padding(horizontal = 18.dp, vertical = 12.dp), size = 14.sp)
                 }
             }
+            LinkFlowOverlay(link) { toastText = it }
+            io.github.linuxkernel44.opensoundboard.ui.screens.CookieImportDialog()
             editing?.let { id -> Box(Modifier.fillMaxSize().imePadding()) { SoundSheet(id) { editing = null } } }
         }
     }

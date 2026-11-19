@@ -83,6 +83,7 @@ fun SoundsScreen(
     favoritesOnly: Boolean, category: String?, onCategory: (String?) -> Unit, onEdit: (Int) -> Unit,
     bottomInset: androidx.compose.ui.unit.Dp,
     onUpdate: () -> Unit = {},
+    onLink: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val backdrop = LocalBackdrop.current
@@ -102,7 +103,10 @@ fun SoundsScreen(
 
     Column(Modifier.fillMaxSize()) {
         ScreenTitle(stringResource(if (favoritesOnly) R.string.tab_favorites else R.string.tab_sounds)) {
-            if (!favoritesOnly) GlassAction(backdrop, { picker.launch(arrayOf("audio/*", "application/ogg")) }, icon = Ico.Plus, label = stringResource(R.string.import_sounds))
+            if (!favoritesOnly) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassAction(backdrop, onLink, icon = Ico.Link)
+                GlassAction(backdrop, { picker.launch(arrayOf("audio/*", "application/ogg")) }, icon = Ico.Plus, label = stringResource(R.string.import_sounds))
+            }
         }
         InfoBar(Modifier.padding(horizontal = 16.dp))
         UpdateManager.pendingRelease()?.takeIf { !favoritesOnly }?.let { r ->

@@ -26,6 +26,7 @@ object SoundLoader {
 
     private fun decodeWithMediaCodec(id: Int, file: File, size: Long): SourceInfo? {
         val ex = MediaExtractor()
+        var raw: File? = null
         try {
             ex.setDataSource(file.absolutePath)
             val track = (0 until ex.trackCount).firstOrNull { ex.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
@@ -38,46 +39,50 @@ object SoundLoader {
             codec.start()
             var rate = fmt.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var ch = fmt.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-            var buf = ByteBuffer.allocateDirect(1 shl 20).order(ByteOrder.nativeOrder())
+            // Decoded samples go to a temp file as float32, so a long track never has to fit in the Java heap.
+            val tmp = File.createTempFile("pcm", ".raw", file.parentFile).also { raw = it }
+            var totalFloats = 0L
             var floatOut = false
             val bi = MediaCodec.BufferInfo()
             var inDone = false
             var outDone = false
-            while (!outDone) {
-                if (!inDone) {
-                    val i = codec.dequeueInputBuffer(5_000)
-                    if (i >= 0) {
-                        val n = ex.readSampleData(codec.getInputBuffer(i)!!, 0)
-                        if (n < 0) { codec.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); inDone = true }
-                        else { codec.queueInputBuffer(i, 0, n, ex.sampleTime, 0); ex.advance() }
-                    }
-                }
-                val o = codec.dequeueOutputBuffer(bi, 5_000)
-                when {
-                    o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                        val of = codec.outputFormat
-                        rate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE); ch = of.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                        floatOut = of.containsKey(MediaFormat.KEY_PCM_ENCODING) && of.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
-                    }
-                    o >= 0 -> {
-                        val out = codec.getOutputBuffer(o)!!
-                        out.position(bi.offset); out.limit(bi.offset + bi.size)
-                        val floats = if (floatOut) bi.size / 4 else bi.size / 2
-                        if (buf.remaining() < floats * 4) {
-                            val nb = ByteBuffer.allocateDirect(maxOf(buf.capacity() * 2, buf.position() + floats * 4)).order(ByteOrder.nativeOrder())
-                            buf.flip(); nb.put(buf); buf = nb
+            java.io.BufferedOutputStream(tmp.outputStream(), 1 shl 18).use { out ->
+                var chunk = ByteArray(1 shl 16)
+                while (!outDone) {
+                    if (!inDone) {
+                        val i = codec.dequeueInputBuffer(5_000)
+                        if (i >= 0) {
+                            val n = ex.readSampleData(codec.getInputBuffer(i)!!, 0)
+                            if (n < 0) { codec.queueInputBuffer(i, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM); inDone = true }
+                            else { codec.queueInputBuffer(i, 0, n, ex.sampleTime, 0); ex.advance() }
                         }
-                        if (floatOut) buf.put(out)
-                        else { val sb = out.order(ByteOrder.nativeOrder()).asShortBuffer(); repeat(floats) { buf.putFloat(sb.get() / 32768f) } }
-                        codec.releaseOutputBuffer(o, false)
-                        if (bi.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outDone = true
+                    }
+                    val o = codec.dequeueOutputBuffer(bi, 5_000)
+                    when {
+                        o == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                            val of = codec.outputFormat
+                            rate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE); ch = of.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                            floatOut = of.containsKey(MediaFormat.KEY_PCM_ENCODING) && of.getInteger(MediaFormat.KEY_PCM_ENCODING) == android.media.AudioFormat.ENCODING_PCM_FLOAT
+                        }
+                        o >= 0 -> {
+                            val buf = codec.getOutputBuffer(o)!!
+                            buf.position(bi.offset); buf.limit(bi.offset + bi.size)
+                            val floats = if (floatOut) bi.size / 4 else bi.size / 2
+                            if (chunk.size < floats * 4) chunk = ByteArray(floats * 4)
+                            val cb = ByteBuffer.wrap(chunk).order(ByteOrder.nativeOrder())
+                            if (floatOut) cb.asFloatBuffer().put(buf.order(ByteOrder.nativeOrder()).asFloatBuffer())
+                            else { val sb = buf.order(ByteOrder.nativeOrder()).asShortBuffer(); val fb = cb.asFloatBuffer(); repeat(floats) { fb.put(sb.get() / 32768f) } }
+                            out.write(chunk, 0, floats * 4)
+                            totalFloats += floats
+                            codec.releaseOutputBuffer(o, false)
+                            if (bi.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outDone = true
+                        }
                     }
                 }
             }
             codec.stop(); codec.release()
-            var frames = buf.position() / 4 / ch
+            var frames = (totalFloats / ch).toInt()
             if (frames <= 0) return null
-            buf.flip()
             // Gapless: drop the encoder delay (priming) and padding that AAC / M4A files declare, so the decoded
             // audio is exactly the original length and loops repeat without a gap.
             var delay = 0
@@ -86,14 +91,10 @@ object SoundLoader {
                 if (fmt.containsKey("encoder-delay")) delay = fmt.getInteger("encoder-delay").coerceAtLeast(0)
                 if (fmt.containsKey("encoder-padding")) padding = fmt.getInteger("encoder-padding").coerceAtLeast(0)
                 if (delay + padding >= frames) { delay = 0; padding = 0 }
-                if (delay > 0 || padding > 0) {
-                    buf.position(delay * ch * 4).limit((frames - padding) * ch * 4)
-                    buf = buf.slice().order(ByteOrder.nativeOrder())
-                    frames -= delay + padding
-                }
+                frames -= delay + padding
             }
             val label = mime.removePrefix("audio/").uppercase().replace("MPEG", "MP3").replace("MP4A-LATM", "AAC")
-            if (!NativeEngine.loadPcm(id, buf, frames, ch, rate, label)) return null
+            if (!NativeEngine.loadPcmFile(id, tmp.absolutePath, delay, frames, ch, rate, label)) return null
             val ms = frames * 1000L / rate
             val br = if (fmt.containsKey(MediaFormat.KEY_BIT_RATE)) fmt.getInteger(MediaFormat.KEY_BIT_RATE) / 1000 else kbps(size, ms)
             return SourceInfo(label, rate, ch, 0, br, ms, size, delay, padding)
@@ -101,6 +102,7 @@ object SoundLoader {
             return null
         } finally {
             ex.release()
+            raw?.delete()
         }
     }
 }

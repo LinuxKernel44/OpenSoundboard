@@ -1,1 +1,29 @@
 -keep class io.github.linuxkernel44.opensoundboard.audio.NativeEngine { *; }
+
+# yt-dlp wrapper (Jackson maps yt-dlp's JSON by reflection) and NewPipeExtractor (reflection, Rhino, Jsoup)
+-keep class com.yausername.youtubedl_android.** { *; }
+-keep class com.yausername.youtubedl_common.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+-keep class org.schabi.newpipe.extractor.** { *; }
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.mozilla.classfile.** { *; }
+-dontwarn org.mozilla.javascript.JavaToJSONConverters
+-dontwarn org.mozilla.javascript.tools.**
+-dontwarn java.beans.**
+-dontwarn javax.script.**
+-dontwarn javax.lang.model.**
+-dontwarn org.slf4j.**
+-dontwarn com.google.auto.value.**
+-dontwarn edu.umd.cs.findbugs.annotations.**
+-dontwarn javax.annotation.**
+-dontwarn jdk.dynalink.**
+-dontwarn org.w3c.dom.bootstrap.**
+-keep class org.apache.commons.compress.** { *; }
+-keep class org.apache.commons.io.** { *; }
+-keep class org.apache.commons.codec.** { *; }
+-dontwarn org.apache.commons.compress.**
+-dontwarn org.tukaani.**
+-dontwarn com.github.luben.**
+-dontwarn org.brotli.**
+-dontwarn org.objectweb.asm.**

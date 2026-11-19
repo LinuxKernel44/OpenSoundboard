@@ -422,6 +422,24 @@ JNIEXPORT jboolean JNICALL FN(loadPcm)(JNIEnv* env, jobject, jint id, jobject bu
     E().put(id, s);
     return JNI_TRUE;
 }
+// Same as loadPcm, but the float32 samples come from a raw file (long audio never has to fit in the Java heap).
+JNIEXPORT jboolean JNICALL FN(loadPcmFile)(JNIEnv* env, jobject, jint id, jstring path, jint skipFrames, jint frames, jint ch, jint rate, jstring codec) {
+    if (frames <= 0 || ch <= 0) return JNI_FALSE;
+    const char* p = env->GetStringUTFChars(path, nullptr);
+    FILE* fp = fopen(p, "rb");
+    env->ReleaseStringUTFChars(path, p);
+    if (!fp) return JNI_FALSE;
+    auto* s = new Sound();
+    s->channels = ch; s->sampleRate = rate; s->bitDepth = 0;
+    const char* c = env->GetStringUTFChars(codec, nullptr); s->codec = c; env->ReleaseStringUTFChars(codec, c);
+    size_t n = (size_t)frames * ch;
+    s->data.resize(n);
+    bool ok = fseeko(fp, (off_t)skipFrames * ch * sizeof(float), SEEK_SET) == 0 && fread(s->data.data(), sizeof(float), n, fp) == n;
+    fclose(fp);
+    if (!ok) { delete s; return JNI_FALSE; }
+    E().put(id, s);
+    return JNI_TRUE;
+}
 JNIEXPORT void JNICALL FN(unload)(JNIEnv*, jobject, jint id) { E().remove(id); }
 JNIEXPORT void JNICALL FN(play)(JNIEnv*, jobject, jint id, jint mode, jfloat gain, jfloat startFrac, jfloat endFrac) {
     Sound* s = E().get(id);

@@ -12,6 +12,7 @@ An open-source, audiophile soundboard for Android with a Liquid Glass interface.
 - **Backup**: export and import your whole library as a zip. Share any sound with other apps: for a trimmed or boosted sound you choose between the original file and the edited version (24-bit WAV with trim, volume and gain applied).
 - **Liquid Glass UI** built with [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) (Jetpack Compose). Full refraction needs Android 13+; older versions (minimum Android 8) fall back to frosted translucency.
 - **Liquid Glass settings**: opacity, blur, refraction, color vibrancy, edge highlight and chromatic dispersion, applied live to every glass surface, with a reset button.
+- **Audio from a link**: paste a link (or share one from YouTube and other apps) to download its best audio stream untouched, with a preview, progress and cancel. [yt-dlp](https://github.com/yt-dlp/yt-dlp) runs first; if it fails it is updated and retried, then [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) takes over. Cut the audio into several pads with markers, silence detection or the video's chapters; each pad is a lossless FLAC decoded from the source. In Settings you can import your own cookies (`cookies.txt`, per site or global) and a YouTube PO token for private or age-restricted media; they are stored encrypted with an Android Keystore key and never backed up.
 - **In-app updates**: checks the GitHub releases, downloads the new APK with progress, verifies its SHA-256 and signing certificate, then installs it with the system installer. Optional automatic check at launch, "skip this version", and a banner when an update is available.
 - English (US) and French.
 
@@ -41,8 +42,10 @@ keyPassword=...
 ```
 
 ```
-./gradlew assembleRelease -PkeystoreProperties=/path/to/keystore.properties
+./gradlew assembleRelease -PkeystoreProperties=/path/to/keystore.properties -PosbAbis=arm64-v8a
 ```
+
+The bundled yt-dlp, Python and ffmpeg add about 55 MB per ABI, so builds target `arm64-v8a` and `x86_64` by default (`-PosbAbis=arm64-v8a` for a phone-only release APK).
 
 ## Architecture
 
@@ -53,4 +56,4 @@ keyPassword=...
 
 ## License
 
-Apache-2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+OpenSoundboard's own source code is Apache-2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Since 0.12.0 the release APK bundles GPL-3.0 components (youtubedl-android and NewPipeExtractor for link downloads), so the APK as a whole is distributed under the GPL-3.0; this repository at the release tag is its complete source.

@@ -12,6 +12,8 @@ object NativeEngine {
     external fun loadFile(id: Int, path: String, gapless: Boolean): IntArray?
     external fun codecOf(id: Int): String
     external fun loadPcm(id: Int, buffer: ByteBuffer, frames: Int, channels: Int, sampleRate: Int, codec: String): Boolean
+    /** Like [loadPcm] but reads float32 samples from a raw file, skipping [skipFrames] frames first. */
+    external fun loadPcmFile(id: Int, path: String, skipFrames: Int, frames: Int, channels: Int, sampleRate: Int, codec: String): Boolean
     external fun unload(id: Int)
     /** mode: 0 one-shot, 1 loop, 2 hold. */
     external fun play(id: Int, mode: Int, gain: Float, startFrac: Float, endFrac: Float)

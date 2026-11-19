@@ -216,6 +216,7 @@ fun SettingsScreen(bottomInset: Dp) {
                     GlassAction(backdrop, { importLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, icon = Ico.Download, label = stringResource(R.string.import_backup))
                 }
             }
+            LinkDownloadsSection()
             UpdatesSection()
             Section(stringResource(R.string.about)) {
                 GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
