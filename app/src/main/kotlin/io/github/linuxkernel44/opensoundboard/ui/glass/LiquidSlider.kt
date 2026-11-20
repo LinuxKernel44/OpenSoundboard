@@ -50,6 +50,7 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import kotlinx.coroutines.flow.collectLatest
 
+/** The Liquid Glass slider, or a Material 3 slider when Liquid Glass is turned off in Settings. */
 @Composable
 fun LiquidSlider(
     value: () -> Float,
@@ -59,6 +60,21 @@ fun LiquidSlider(
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
     /** Double-tapping the slider sets this value (null disables the shortcut). */
+    defaultValue: Float? = null,
+) {
+    if (io.github.linuxkernel44.opensoundboard.data.Settings.materialUi)
+        androidx.compose.material3.Slider(value().coerceIn(valueRange), onValueChange, modifier.doubleTapToReset(defaultValue) { onValueChange(it) }, valueRange = valueRange)
+    else GlassSlider(value, onValueChange, valueRange, visibilityThreshold, backdrop, modifier, defaultValue)
+}
+
+@Composable
+private fun GlassSlider(
+    value: () -> Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    visibilityThreshold: Float,
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier,
     defaultValue: Float? = null,
 ) {
     val isLightTheme = !io.github.linuxkernel44.opensoundboard.ui.theme.LocalAurora.current.dark

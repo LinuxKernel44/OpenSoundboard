@@ -150,7 +150,11 @@ fun SettingsScreen(bottomInset: Dp) {
                     LiquidToggle({ Settings.gapless }, { Settings.gapless = it; Settings.save(); thread { Library.loadAllIntoEngine() } }, backdrop)
                 }
             }
-            Section(stringResource(R.string.background)) {
+            Section(stringResource(R.string.ui_style)) {
+                Segmented(backdrop, listOf(stringResource(R.string.ui_glass), stringResource(R.string.ui_material)), if (Settings.materialUi) 1 else 0, { Settings.materialUi = it == 1; Settings.save() })
+                AText(stringResource(R.string.ui_style_hint), size = 12.sp, color = p.muted, modifier = Modifier.padding(horizontal = 6.dp))
+            }
+            if (!Settings.materialUi) Section(stringResource(R.string.background)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Backdrops.entries.forEachIndexed { i, b ->
                         val sel = Settings.background == i
@@ -166,7 +170,7 @@ fun SettingsScreen(bottomInset: Dp) {
                     }
                 }
             }
-            Section(stringResource(R.string.glass_title)) {
+            if (!Settings.materialUi) Section(stringResource(R.string.glass_title)) {
                 GlassPanel(backdrop, Modifier.fillMaxWidth(), radius = 22.dp) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         GlassSliderRow(stringResource(R.string.glass_opacity), "${(Settings.glassOpacity * 100).toInt()}%", { Settings.glassOpacity }, 0f..1f, Settings.DEFAULT_GLASS_OPACITY) { Settings.glassOpacity = it; Settings.save() }

@@ -121,6 +121,10 @@
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
+    <string name="ui_style">Style de l\'interface</string>
+    <string name="ui_glass">Liquid Glass</string>
+    <string name="ui_material">Material 3</string>
+    <string name="ui_style_hint">Material 3 désactive complètement le Liquid Glass : surfaces unies, contrôles standards et couleurs de votre système (Android 12+).</string>
     <string name="glass_title">Liquid Glass</string>
     <string name="glass_opacity">Opacité</string>
     <string name="glass_blur">Flou</string>

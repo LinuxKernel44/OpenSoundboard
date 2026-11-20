@@ -28,6 +28,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -194,14 +196,18 @@ private fun Pad(s: SoundItem, onEdit: (Int) -> Unit) {
         Modifier
             .aspectRatio(1f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .drawBackdrop(
-                backdrop, { RoundedRectangle(22.dp) },
-                effects = { with(GlassStyle) { glassEffects(false, !p.dark) } },
-                highlight = { GlassStyle.highlight(false) },
-                onDrawSurface = {
-                    drawRect(GlassStyle.tint(p.glass))
-                    if (playing) drawRect(p.accent.copy(0.28f))
-                },
+            .then(
+                if (io.github.linuxkernel44.opensoundboard.data.Settings.materialUi)
+                    Modifier.clip(RoundedCornerShape(22.dp)).background(if (playing) p.accent.copy(0.28f).compositeOver(p.glass) else p.glass)
+                else Modifier.drawBackdrop(
+                    backdrop, { RoundedRectangle(22.dp) },
+                    effects = { with(GlassStyle) { glassEffects(false, !p.dark) } },
+                    highlight = { GlassStyle.highlight(false) },
+                    onDrawSurface = {
+                        drawRect(GlassStyle.tint(p.glass))
+                        if (playing) drawRect(p.accent.copy(0.28f))
+                    },
+                )
             )
             .pointerInput(s.id) {
                 // A tap plays on release; a long press does nothing. Hold-mode pads are the exception:

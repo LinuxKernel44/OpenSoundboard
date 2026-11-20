@@ -37,6 +37,7 @@ object Settings {
     var skippedVersion = ""
     var singleSound by mutableStateOf(true)          // starting a sound cuts the one that is playing
     var background by mutableIntStateOf(0)           // index into Backgrounds
+    var materialUi by mutableStateOf(false)         // plain Material 3 look instead of Liquid Glass
     var autoPoToken by mutableStateOf(true)          // generate a YouTube PO token on the device when a link needs it
     var spectrumBands = 32
 
@@ -55,6 +56,7 @@ object Settings {
         autoUpdateCheck = prefs.getBoolean("autoUpd", true)
         lastUpdateCheck = prefs.getLong("lastUpd", 0L)
         skippedVersion = prefs.getString("skipVer", "") ?: ""
+        materialUi = prefs.getBoolean("m3", false)
         glassOpacity = prefs.getFloat("gOpacity", DEFAULT_GLASS_OPACITY)
         glassBlur = prefs.getFloat("gBlur", DEFAULT_GLASS_BLUR)
         glassRefraction = prefs.getFloat("gRefr", DEFAULT_GLASS_REFRACTION)
@@ -73,6 +75,6 @@ object Settings {
     fun save() {
         prefs.edit().putInt("outDev", outputDeviceId).putInt("outRate", outputSampleRate).putBoolean("exclusive", exclusive)
             .putFloat("master", masterVolume).putInt("recDev", recordDeviceId).putInt("recRate", recordSampleRate)
-            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putBoolean("gapless", gapless).putBoolean("autoUpd", autoUpdateCheck).putLong("lastUpd", lastUpdateCheck).putString("skipVer", skippedVersion).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).putBoolean("autoPot", autoPoToken).apply()
+            .putBoolean("recFloat", recordFloat).putBoolean("single", singleSound).putInt("theme", themeMode).putBoolean("gapless", gapless).putBoolean("autoUpd", autoUpdateCheck).putLong("lastUpd", lastUpdateCheck).putString("skipVer", skippedVersion).putFloat("gOpacity", glassOpacity).putFloat("gBlur", glassBlur).putFloat("gRefr", glassRefraction).putBoolean("gChroma", glassChromatic).putFloat("gSat", glassSaturation).putFloat("gHigh", glassHighlight).putInt("bg", background).putBoolean("autoPot", autoPoToken).putBoolean("m3", materialUi).apply()
     }
 }

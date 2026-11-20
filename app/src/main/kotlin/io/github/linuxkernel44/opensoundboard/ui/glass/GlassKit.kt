@@ -1,6 +1,18 @@
 package io.github.linuxkernel44.opensoundboard.ui.glass
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import io.github.linuxkernel44.opensoundboard.data.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -42,6 +54,11 @@ fun GlassPanel(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val p = LocalAurora.current
+    if (Settings.materialUi) {
+        val shape = RoundedCornerShape(radius)
+        Box(modifier.shadow(if (strong) 6.dp else 0.dp, shape).clip(shape).background(if (strong) p.glassStrong else p.glass).then(if (tint != Color.Unspecified) Modifier.background(tint) else Modifier), content = content)
+        return
+    }
     Box(
         modifier.drawBackdrop(
             backdrop = backdrop,
@@ -60,6 +77,11 @@ fun GlassPanel(
 @Composable
 fun GlassChip(backdrop: Backdrop, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val p = LocalAurora.current
+    if (Settings.materialUi) {
+        FilterChip(selected, onClick, label = { AText(label, size = 13.sp, color = if (selected) p.onAccent else p.text, weight = FontWeight.Medium, maxLines = 1) }, modifier = modifier,
+            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = p.accent, containerColor = p.glass))
+        return
+    }
     Box(
         modifier
             .drawBackdrop(
@@ -82,6 +104,16 @@ fun GlassAction(
 ) {
     val p = LocalAurora.current
     val fg = when { accent -> p.onAccent; danger -> p.danger; else -> p.text }
+    if (Settings.materialUi) {
+        val colors = ButtonDefaults.buttonColors(
+            containerColor = if (accent) p.accent else p.glassStrong, contentColor = fg)
+        Button(onClick, modifier.height(48.dp), colors = colors, contentPadding = PaddingValues(horizontal = 16.dp)) {
+            if (icon != null) Icon(icon, tint = fg, size = 20.dp)
+            if (icon != null && label != null) Spacer(Modifier.width(8.dp))
+            if (label != null) AText(label, color = fg, weight = FontWeight.Medium, maxLines = 1)
+        }
+        return
+    }
     LiquidButton(
         onClick = onClick, backdrop = backdrop, modifier = modifier,
         tint = if (accent) p.accent else Color.Unspecified, surfaceColor = if (accent) Color.Unspecified else GlassStyle.tint(p.glass),

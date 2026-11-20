@@ -45,8 +45,16 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import kotlinx.coroutines.flow.collectLatest
 
+/** The Liquid Glass toggle, or a Material 3 switch when Liquid Glass is turned off in Settings. */
 @Composable
-fun LiquidToggle(
+fun LiquidToggle(selected: () -> Boolean, onSelect: (Boolean) -> Unit, backdrop: Backdrop, modifier: Modifier = Modifier) {
+    if (io.github.linuxkernel44.opensoundboard.data.Settings.materialUi)
+        androidx.compose.material3.Switch(selected(), onSelect, modifier)
+    else GlassToggle(selected, onSelect, backdrop, modifier)
+}
+
+@Composable
+private fun GlassToggle(
     selected: () -> Boolean,
     onSelect: (Boolean) -> Unit,
     backdrop: Backdrop,

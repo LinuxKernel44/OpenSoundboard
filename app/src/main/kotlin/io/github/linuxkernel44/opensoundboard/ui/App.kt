@@ -15,6 +15,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import io.github.linuxkernel44.opensoundboard.ui.theme.materialDark
+import io.github.linuxkernel44.opensoundboard.ui.theme.materialScheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,6 +65,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun OpenSoundboardApp() {
     val palette = auroraPalette()
+    val material = Settings.materialUi
+    val scheme = if (material) materialScheme(materialDark()) else null
     val backdrop = rememberLayerBackdrop()
     val meters = remember { Meters() }
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -96,9 +104,11 @@ fun OpenSoundboardApp() {
     LaunchedEffect(Incoming.url) { Incoming.url?.let { link.open(it, category); Incoming.url = null } }
     LaunchedEffect(toastText) { if (toastText != null) { delay(2600); toastText = null } }
 
+    val content: @Composable () -> Unit = {
     CompositionLocalProvider(LocalAurora provides palette, LocalBackdrop provides backdrop, LocalMeters provides meters, LocalToast provides { toastText = it }) {
         Box(Modifier.fillMaxSize()) {
-            PhotoBackground(Settings.background, palette.dark, Modifier.layerBackdrop(backdrop))
+            if (material) Box(Modifier.fillMaxSize().background(scheme!!.surface).layerBackdrop(backdrop))
+            else PhotoBackground(Settings.background, palette.dark, Modifier.layerBackdrop(backdrop))
             val bottomInset = 104.dp
             Box(Modifier.fillMaxSize().statusBarsPadding()) {
                 Crossfade(tab, label = "tab") { t ->
@@ -112,7 +122,17 @@ fun OpenSoundboardApp() {
                 }
             }
             val tabs = listOf(Ico.Sounds to R.string.tab_sounds, Ico.Grid to R.string.tab_categories, Ico.Heart to R.string.tab_favorites, Ico.Record to R.string.tab_record, Ico.Sliders to R.string.tab_settings)
-            LiquidBottomTabs(
+            if (material) {
+                NavigationBar(Modifier.align(Alignment.BottomCenter)) {
+                    tabs.forEachIndexed { i, (ico, label) ->
+                        NavigationBarItem(
+                            selected = tab == i, onClick = { tab = i },
+                            icon = { Icon(ico, tint = if (tab == i) scheme!!.onSecondaryContainer else palette.muted, size = 24.dp) },
+                            label = { AText(stringResource(label), size = 11.sp, color = palette.text, maxLines = 1) },
+                        )
+                    }
+                }
+            } else LiquidBottomTabs(
                 selectedTabIndex = { tab }, onTabSelected = { tab = it }, backdrop = backdrop, tabsCount = tabs.size,
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
@@ -133,5 +153,6 @@ fun OpenSoundboardApp() {
             editing?.let { id -> Box(Modifier.fillMaxSize().imePadding()) { SoundSheet(id) { editing = null } } }
         }
     }
+    }
+    if (scheme != null) MaterialTheme(colorScheme = scheme, content = content) else content()
 }
-

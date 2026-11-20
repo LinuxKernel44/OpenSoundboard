@@ -9,6 +9,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import android.os.Build
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -63,10 +70,34 @@ val LightAurora = AuroraPalette(
 
 val LocalAurora = staticCompositionLocalOf { DarkAurora }
 
+/** Dark or light for the Appearance setting (0 system, 1 light, 2 dark). */
+@Composable
+fun materialDark(): Boolean = when (Settings.themeMode) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }
+
+/** Material 3 colors: the wallpaper-derived scheme on Android 12+, the stock one before. */
+@Composable
+fun materialScheme(dark: Boolean): ColorScheme {
+    val ctx = LocalContext.current
+    return when {
+        Build.VERSION.SDK_INT >= 31 -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+        dark -> darkColorScheme()
+        else -> lightColorScheme()
+    }
+}
+
+/** The app's palette expressed with Material 3 colors, so every screen follows the scheme when Liquid Glass is off. */
+fun materialPalette(dark: Boolean, c: ColorScheme) = AuroraPalette(
+    dark = dark, text = c.onSurface, muted = c.onSurfaceVariant, accent = c.primary, onAccent = c.onPrimary,
+    ok = if (dark) Color(0xFF3DDC97) else Color(0xFF138A5A), danger = c.error,
+    glass = c.surfaceContainerHigh, glassStrong = c.surfaceContainerHighest, scrim = Color.Black.copy(0.4f),
+    gradient = listOf(c.background, c.background, c.background), blobs = listOf(c.primary, c.secondary, c.tertiary),
+)
+
 /** Resolves the palette from the Appearance setting (0 system, 1 light, 2 dark). */
 @Composable
 fun auroraPalette(): AuroraPalette {
     val system = isSystemInDarkTheme()
+    if (Settings.materialUi) return materialPalette(materialDark(), materialScheme(materialDark()))
     return when (Settings.themeMode) { 1 -> LightAurora; 2 -> DarkAurora; else -> if (system) DarkAurora else LightAurora }
 }
 
