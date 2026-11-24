@@ -94,13 +94,16 @@ object Player {
             PlayMode.HOLD -> { if (single) NativeEngine.stopAll(); NativeEngine.play(s.id, 2, s.linearGain(), 0f, 1f) }
         }
     }
-    /** Touch on a pad's waveform: starts the sound if needed, then jumps to [fraction] of the file. */
-    fun scrubStart(s: SoundItem, fraction: Float, wasPlaying: Boolean) {
+    /**
+     * Touch on a pad's waveform. A sound that is not playing starts from its beginning wherever the finger lands; only a
+     * sound that is already playing jumps to [fraction]. Returns whether it was already playing (so a drag knows if it may seek).
+     */
+    fun scrubStart(s: SoundItem, fraction: Float, wasPlaying: Boolean): Boolean {
         if (!wasPlaying) {
             if (Settings.singleSound) NativeEngine.stopAll()
             NativeEngine.play(s.id, if (s.mode == PlayMode.LOOP) 1 else 0, s.linearGain(), 0f, 1f)
-        }
-        NativeEngine.seek(s.id, fraction)
+        } else NativeEngine.seek(s.id, fraction)
+        return wasPlaying
     }
     /** Stops a hold-mode sound after [ms], used for a quick tap on a hold pad. */
     fun releaseLater(s: SoundItem, ms: Long) { main.postDelayed({ release(s) }, ms) }

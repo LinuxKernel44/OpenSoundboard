@@ -180,14 +180,15 @@ fun SeekWaveform(s: SoundItem, buckets: Int, modifier: Modifier = Modifier, hPad
                 })
             }
             .pointerInput(s.id) {
+                var mayScrub = false   // only a sound that was already playing when the drag began can be scrubbed
                 detectHorizontalDragGestures(
                     onDragStart = { o ->
                         m.lastSoundId = cur.id
-                        Player.scrubStart(cur, fraction(o.x, size.width), NativeEngine.isPlaying(cur.id))
+                        mayScrub = Player.scrubStart(cur, fraction(o.x, size.width), NativeEngine.isPlaying(cur.id))
                     },
                 ) { change, _ ->
                     change.consume()
-                    NativeEngine.seek(cur.id, fraction(change.position.x, size.width))
+                    if (mayScrub) NativeEngine.seek(cur.id, fraction(change.position.x, size.width))
                 }
             },
     ) {
